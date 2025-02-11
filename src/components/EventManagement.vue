@@ -1,0 +1,920 @@
+<template>
+  <div class="homepage">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="logo">
+        <img src="../assets/logo.png" alt="Logo" />
+        <h2>Alumni Connect</h2>
+      </div>
+      <nav class="nav-links">
+        <router-link to="/home" class="nav-item">
+          <i class="fas fa-home"></i>
+          <span>Home</span>
+        </router-link>
+        <router-link to="/contacts" class="nav-item">
+          <i class="fas fa-address-book"></i>
+          <span>Contacts</span>
+        </router-link>
+        <router-link to="/events" class="nav-item active">
+          <i class="fas fa-calendar"></i>
+          <span>Events</span>
+        </router-link>
+      </nav>
+      <a href="#" class="logout" @click.prevent="handleLogout">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Logout</span>
+      </a>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Stats Cards Section -->
+      <section class="stats-cards">
+        <div class="card">
+          <div class="card-icon pink">
+            <i class="fas fa-calendar"></i>
+          </div>
+          <h3>Total Events</h3>
+          <p>{{ events.length }}</p>
+        </div>
+        <div class="card">
+          <div class="card-icon green">
+            <i class="fas fa-user-check"></i>
+          </div>
+          <h3>Active Events</h3>
+          <p>{{ activeEvents }}</p>
+        </div>
+        <div class="card">
+          <div class="card-icon purple">
+            <i class="fas fa-users"></i>
+          </div>
+          <h3>Total Attendees</h3>
+          <p>{{ totalAttendees }}</p>
+        </div>
+      </section>
+
+      <!-- Events Section -->
+      <section class="events-section">
+        <div class="section-header">
+          <div>
+            <h2>Event Management</h2>
+            <p>View and manage your events</p>
+          </div>
+          <button class="create-button" @click="showCreateEventModal">
+            <i class="fas fa-plus"></i> Create Event
+          </button>
+        </div>
+
+        <div class="filter-bar">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input 
+              type="text" 
+              placeholder="Search events..." 
+              v-model="searchQuery"
+            />
+          </div>
+          <select v-model="selectedEventType" class="filter-select">
+            <option value="">All Types</option>
+            <option value="major">Major School Events</option>
+            <option value="minor">Minor School Events</option>
+            <option value="research">Research Collaboration</option>
+            <option value="mentorship">Mentorship for Startups</option>
+          </select>
+        </div>
+
+        <div class="events-grid">
+          <div v-for="event in filteredEvents" :key="event.id" class="event-card">
+            <div class="event-date">
+              <span class="day">{{ formatDate(event.date).day }}</span>
+              <span class="month">{{ formatDate(event.date).month }}</span>
+            </div>
+            <div class="event-details">
+              <h3>{{ event.name }}</h3>
+              <span class="event-time">
+                <i class="fas fa-clock"></i> {{ event.time }}
+              </span>
+              <span class="event-type">{{ formatEventType(event.type) }}</span>
+            </div>
+            <div class="event-actions">
+              <button class="invite-btn" @click="showInviteModal(event)">
+                <i class="fas fa-user-plus"></i> Invite Alumni
+              </button>
+              <button class="delete-btn" @click="deleteEvent(event.id)">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Create Event Modal -->
+    <div v-if="isCreateModalVisible" class="modal">
+      <div class="modal-content">
+        <h2>Create New Event</h2>
+        <form @submit.prevent="createEvent">
+          <div class="form-group">
+            <label>Event Name</label>
+            <input type="text" v-model="newEvent.name" required />
+          </div>
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" v-model="newEvent.date" required />
+          </div>
+          <div class="form-group">
+            <label>Time</label>
+            <input type="time" v-model="newEvent.time" required />
+          </div>
+          <div class="form-group">
+            <label>Event Type</label>
+            <select v-model="newEvent.type" required>
+              <option value="major">Major School Events</option>
+              <option value="minor">Minor School Events</option>
+              <option value="research">Research Collaboration</option>
+              <option value="mentorship">Mentorship for Startups</option>
+            </select>
+          </div>
+          <div class="modal-actions">
+            <button type="button" @click="hideCreateEventModal" class="cancel-btn">
+              Cancel
+            </button>
+            <button type="submit" class="submit-btn">Create Event</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Invite Alumni Modal -->
+    <div v-if="isInviteModalVisible" class="modal">
+      <div class="modal-content">
+        <h2>Invite Alumni to {{ selectedEvent?.name }}</h2>
+        <form @submit.prevent="sendInvitations">
+          <div class="form-group">
+            <label>Select Alumni</label>
+            <div class="alumni-list">
+              <div v-for="alumnus in alumni" :key="alumnus.id" class="alumnus-checkbox">
+                <input
+                  type="checkbox"
+                  :value="alumnus.id"
+                  v-model="selectedAlumni"
+                />
+                <span>{{ alumnus.name }} ({{ alumnus.email }})</span>
+              </div>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" @click="hideInviteModal" class="cancel-btn">
+              Cancel
+            </button>
+            <button type="submit" class="submit-btn">Send Invitations</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+export default {
+  name: 'EventManagement',
+  data() {
+    return {
+      events: [
+        { 
+          id: 1, 
+          name: 'Annual Alumni Gathering', 
+          date: '2024-04-15', 
+          time: '14:00', 
+          type: 'major', 
+          invitedAlumni: [] 
+        },
+        { 
+          id: 2, 
+          name: 'Startup Mentoring Session', 
+          date: '2024-04-20', 
+          time: '10:00', 
+          type: 'mentorship', 
+          invitedAlumni: [] 
+        },
+        {
+          id: 3,
+          name: 'Research Symposium',
+          date: '2024-04-25',
+          time: '09:00',
+          type: 'research',
+          invitedAlumni: []
+        }
+      ],
+      alumni: [
+        { id: 1, name: 'John Doe', email: 'john@example.com' },
+        { id: 2, name: 'Jane Smith', email: 'jane@example.com' },
+        { id: 3, name: 'Emily Johnson', email: 'emily@example.com' },
+        { id: 4, name: 'Michael Brown', email: 'michael@example.com' },
+        { id: 5, name: 'Sarah Wilson', email: 'sarah@example.com' }
+      ],
+      selectedEvent: null,
+      selectedAlumni: [],
+      isInviteModalVisible: false,
+      isCreateModalVisible: false,
+      searchQuery: '',
+      selectedEventType: '',
+      activeEvents: 2,
+      totalAttendees: 45,
+      newEvent: {
+        name: '',
+        date: '',
+        time: '',
+        type: ''
+      }
+    };
+  },
+  computed: {
+    filteredEvents() {
+      return this.events.filter((event) => {
+        const matchesSearch = event.name.toLowerCase().includes(this.searchQuery.toLowerCase());
+        const matchesType = !this.selectedEventType || event.type === this.selectedEventType;
+        return matchesSearch && matchesType;
+      });
+    }
+  },
+  methods: {
+    showCreateEventModal() {
+      this.isCreateModalVisible = true;
+    },
+    hideCreateEventModal() {
+      this.isCreateModalVisible = false;
+      this.newEvent = { name: '', date: '', time: '', type: '' };
+    },
+    createEvent() {
+      const event = { 
+        ...this.newEvent, 
+        id: Date.now(), 
+        invitedAlumni: [] 
+      };
+      this.events.push(event);
+      this.hideCreateEventModal();
+    },
+    showInviteModal(event) {
+      this.selectedEvent = event;
+      this.selectedAlumni = event.invitedAlumni.map(alumni => alumni.id);
+      this.isInviteModalVisible = true;
+    },
+    hideInviteModal() {
+      this.isInviteModalVisible = false;
+      this.selectedEvent = null;
+      this.selectedAlumni = [];
+    },
+    sendInvitations() {
+      if (this.selectedEvent && this.selectedAlumni.length > 0) {
+        const eventIndex = this.events.findIndex(e => e.id === this.selectedEvent.id);
+        if (eventIndex !== -1) {
+          this.events[eventIndex].invitedAlumni = this.selectedAlumni.map(
+            id => this.alumni.find(alumnus => alumnus.id === id)
+          );
+          // Here you would typically make an API call to send invitations
+          this.$notify({
+            type: 'success',
+            title: 'Success',
+            message: 'Invitations sent successfully!'
+          });
+        }
+        this.hideInviteModal();
+      } else {
+        this.$notify({
+          type: 'warning',
+          title: 'Warning',
+          message: 'Please select at least one alumnus to invite.'
+        });
+      }
+    },
+    formatDate(dateString) {
+      const date = new Date(dateString);
+      return {
+        day: date.getDate(),
+        month: date.toLocaleString('default', { month: 'short' }).toUpperCase()
+      };
+    },
+    formatEventType(type) {
+      return type.charAt(0).toUpperCase() + type.slice(1);
+    },
+    deleteEvent(id) {
+      if (confirm('Are you sure you want to delete this event?')) {
+        this.events = this.events.filter(event => event.id !== id);
+      }
+    },
+    handleLogout() {
+      localStorage.removeItem('user');
+      this.$router.push('/');
+    }
+  }
+};
+</script>
+
+<style scoped>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body, html {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+.homepage {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f8fafc;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+  width: 100%;
+  position: relative;
+  margin: 0;
+  padding: 0;
+}
+
+/* Sidebar Styles */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 280px;
+  background: linear-gradient(180deg, #2B3674 0%, #1A1F37 100%);
+  padding: 30px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  z-index: 100;
+  margin: 0;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 40px;
+}
+
+.logo img {
+  width: 45px;
+  height: auto;
+  filter: brightness(0) invert(1);
+}
+
+.logo h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: white;
+}
+
+.nav-links {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #A3AED0;
+  padding: 12px;
+  border-radius: 14px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.nav-item:hover, .nav-item.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.logout {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #FF5252;
+  text-decoration: none;
+  padding: 12px;
+  border-radius: 14px;
+  margin-top: auto;
+  transition: all 0.3s ease;
+}
+
+.logout:hover {
+  background: rgba(255, 82, 82, 0.1);
+}
+
+/* Main Content Styles */
+.main-content {
+  flex: 1;
+  margin-left: 280px;
+  padding: 30px;
+  overflow-y: auto;
+  min-width: 0;
+  width: calc(100% - 280px);
+}
+
+/* Stats Cards Section */
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.card {
+  background: white;
+  padding: 24px;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  text-align: center;
+}
+
+.card-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  font-size: 24px;
+  color: white;
+}
+
+.card-icon.pink {
+  background: linear-gradient(135deg, #FF5C8E, #FF8FBB);
+}
+
+.card-icon.green {
+  background: linear-gradient(135deg, #05CD99, #08F7BE);
+}
+
+.card-icon.purple {
+  background: linear-gradient(135deg, #4318FF, #868CFF);
+}
+
+.card h3 {
+  color: #A3AED0;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.card p {
+  color: #2B3674;
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 0;
+}
+
+/* Events Section Styles */
+.events-section {
+  background: white;
+  padding: 24px;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #E0E5F2;
+}
+
+.section-header h2 {
+  color: #2B3674;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.section-header p {
+  color: #A3AED0;
+  font-size: 14px;
+  margin: 4px 0 0 0;
+}
+
+.create-button {
+  background: #4318FF;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.create-button:hover {
+  background: #3311CC;
+  transform: translateY(-2px);
+}
+
+/* Filter Bar Styles */
+.filter-bar {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.search-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: #F4F7FE;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid #E0E5F2;
+}
+
+.search-box i {
+  color: #A3AED0;
+  margin-right: 12px;
+}
+
+.search-box input {
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  color: #2B3674;
+  font-size: 14px;
+}
+
+.filter-select {
+  padding: 12px 16px;
+  border: 1px solid #E0E5F2;
+  border-radius: 14px;
+  color: #2B3674;
+  background: white;
+  min-width: 200px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* Events Grid Styles */
+.events-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.event-card {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 16px;
+  border: 1px solid #E0E5F2;
+  transition: all 0.3s ease;
+  align-items: start;
+}
+
+.event-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.event-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  border-radius: 12px;
+  background: #F4F7FE;
+  min-width: 60px;
+}
+
+.event-date .day {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2B3674;
+  line-height: 1;
+}
+
+.event-date .month {
+  font-size: 12px;
+  color: #A3AED0;
+  margin-top: 4px;
+}
+
+.event-details {
+  flex: 1;
+}
+
+.event-details h3 {
+  color: #2B3674;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+}
+
+.event-time {
+  color: #A3AED0;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.event-type {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: #F4F7FE;
+  color: #4318FF;
+  font-size: 12px;
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+.event-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.invite-btn {
+  background: #4318FF;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.invite-btn:hover {
+  background: #3311CC;
+  transform: translateY(-2px);
+}
+
+.delete-btn {
+  background: #FFE4E4;
+  color: #FF5252;
+  border: none;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.delete-btn:hover {
+  background: #FF5252;
+  color: white;
+}
+
+/* Modal Styles */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 32px;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.alumni-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 16px;
+}
+
+.alumnus-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #F4F7FE;
+  margin-bottom: 8px;
+  transition: all 0.3s ease;
+}
+
+.alumnus-checkbox:hover {
+  background: #E0E5F2;
+}
+
+.alumnus-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #4318FF;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #2B3674;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #E0E5F2;
+  border-radius: 14px;
+  font-size: 14px;
+  color: #2B3674;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.cancel-btn {
+  background: #F4F7FE;
+  color: #2B3674;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.submit-btn {
+  background: #4318FF;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* Responsive Styles */
+@media (max-width: 1024px) {
+  .stats-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .events-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    height: auto;
+    padding: 15px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .nav-links {
+    flex-direction: row;
+    gap: 10px;
+  }
+
+  .logo {
+    margin-bottom: 0;
+  }
+
+  .logo h2 {
+    display: none;
+  }
+
+  .nav-item span, 
+  .logout span {
+    display: none;
+  }
+
+  .nav-item, 
+  .logout {
+    justify-content: center;
+    padding: 8px;
+  }
+
+  .nav-item i, 
+  .logout i {
+    font-size: 20px;
+    margin: 0;
+  }
+
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 20px;
+  }
+
+  .stats-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .events-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .event-card {
+    grid-template-columns: auto 1fr;
+  }
+
+  .event-actions {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+  }
+
+  .modal-content {
+    margin: 20px;
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-item, 
+  .logout {
+    padding: 8px;
+  }
+
+  .card {
+    padding: 15px;
+  }
+
+  .chart-container {
+    padding: 15px;
+    min-height: 250px;
+  }
+}
+
+@media (max-width: 320px) {
+  .stats-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .nav-links {
+    gap: 5px;
+  }
+}
+
+@media screen and (orientation: landscape) and (max-height: 500px) {
+  .homepage {
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .main-content {
+    height: auto;
+  }
+}
+
+@media screen and (min-width: 2000px) {
+  .homepage {
+    max-width: 2000px;
+    margin: 0 auto;
+  }
+}
+</style>
