@@ -101,8 +101,8 @@
                 <i class="fas fa-user-plus"></i> Invite Alumni
               </button>
               <button class="delete-btn" @click="deleteEvent(event.id)">
-                <i class="fas fa-trash"></i>
-              </button>
+  <i class="fas fa-trash"></i> Delete Event
+</button>
             </div>
           </div>
         </div>
@@ -327,7 +327,7 @@ body, html {
 .homepage {
   display: flex;
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: #fff5f7;
   font-family: 'Inter', sans-serif;
   overflow: hidden;
   width: 100%;
@@ -343,7 +343,7 @@ body, html {
   top: 0;
   bottom: 0;
   width: 280px;
-  background: linear-gradient(180deg, #2B3674 0%, #1A1F37 100%);
+  background: linear-gradient(180deg, #ff4b7c 0%, #ff1c55 100%);
   padding: 30px;
   color: white;
   display: flex;
@@ -382,7 +382,7 @@ body, html {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #A3AED0;
+  color: #ffb3c7;
   padding: 12px;
   border-radius: 14px;
   text-decoration: none;
@@ -390,7 +390,7 @@ body, html {
 }
 
 .nav-item:hover, .nav-item.active {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.2);
   color: white;
 }
 
@@ -398,7 +398,8 @@ body, html {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #FF5252;
+  color: #ffffff;
+  background-color: #ff1c55;
   text-decoration: none;
   padding: 12px;
   border-radius: 14px;
@@ -407,7 +408,7 @@ body, html {
 }
 
 .logout:hover {
-  background: rgba(255, 82, 82, 0.1);
+  background: #ff4b7c;
 }
 
 /* Main Content Styles */
@@ -432,7 +433,7 @@ body, html {
   background: white;
   padding: 24px;
   border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 20px rgba(255, 75, 124, 0.1);
   text-align: center;
 }
 
@@ -449,25 +450,25 @@ body, html {
 }
 
 .card-icon.pink {
-  background: linear-gradient(135deg, #FF5C8E, #FF8FBB);
+  background: linear-gradient(135deg, #ff4b7c, #ff8faf);
 }
 
 .card-icon.green {
-  background: linear-gradient(135deg, #05CD99, #08F7BE);
+  background: linear-gradient(135deg, #ff6b98, #ff97b8);
 }
 
 .card-icon.purple {
-  background: linear-gradient(135deg, #4318FF, #868CFF);
+  background: linear-gradient(135deg, #ff4b7c, #ff799e);
 }
 
 .card h3 {
-  color: #A3AED0;
+  color: #ffb3c7;
   font-size: 14px;
   margin-bottom: 8px;
 }
 
 .card p {
-  color: #2B3674;
+  color: #ff1c55;
   font-size: 24px;
   font-weight: 700;
   margin-bottom: 0;
@@ -478,7 +479,7 @@ body, html {
   background: white;
   padding: 24px;
   border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 20px rgba(255, 75, 124, 0.1);
 }
 
 .section-header {
@@ -487,24 +488,24 @@ body, html {
   align-items: center;
   margin-bottom: 24px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #E0E5F2;
+  border-bottom: 1px solid #ffe0e5;
 }
 
 .section-header h2 {
-  color: #2B3674;
+  color: #ff1c55;
   font-size: 20px;
   font-weight: 600;
   margin: 0;
 }
 
 .section-header p {
-  color: #A3AED0;
+  color: #ffb3c7;
   font-size: 14px;
   margin: 4px 0 0 0;
 }
 
 .create-button {
-  background: #4318FF;
+  background: #ff4b7c;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -518,7 +519,7 @@ body, html {
 }
 
 .create-button:hover {
-  background: #3311CC;
+  background: #ff1c55;
   transform: translateY(-2px);
 }
 
@@ -533,14 +534,14 @@ body, html {
   flex: 1;
   display: flex;
   align-items: center;
-  background: #F4F7FE;
+  background: #ffe0e5;
   padding: 12px 16px;
   border-radius: 14px;
-  border: 1px solid #E0E5F2;
+  border: 1px solid #ffccd4;
 }
 
 .search-box i {
-  color: #A3AED0;
+  color: #ffb3c7;
   margin-right: 12px;
 }
 
@@ -549,15 +550,15 @@ body, html {
   outline: none;
   background: transparent;
   width: 100%;
-  color: #2B3674;
+  color: #ff1c55;
   font-size: 14px;
 }
 
 .filter-select {
   padding: 12px 16px;
-  border: 1px solid #E0E5F2;
+  border: 1px solid #ffccd4;
   border-radius: 14px;
-  color: #2B3674;
+  color: #ff1c55;
   background: white;
   min-width: 200px;
   font-size: 14px;
@@ -578,14 +579,14 @@ body, html {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 16px;
-  border: 1px solid #E0E5F2;
+  border: 1px solid #ffccd4;
   transition: all 0.3s ease;
   align-items: start;
 }
 
 .event-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 25px rgba(255, 75, 124, 0.15);
 }
 
 .event-date {
@@ -594,20 +595,20 @@ body, html {
   align-items: center;
   padding: 12px;
   border-radius: 12px;
-  background: #F4F7FE;
+  background: #ffe0e5;
   min-width: 60px;
 }
 
 .event-date .day {
   font-size: 24px;
   font-weight: 700;
-  color: #2B3674;
+  color: #ff1c55;
   line-height: 1;
 }
 
 .event-date .month {
   font-size: 12px;
-  color: #A3AED0;
+  color: #ffb3c7;
   margin-top: 4px;
 }
 
@@ -616,14 +617,14 @@ body, html {
 }
 
 .event-details h3 {
-  color: #2B3674;
+  color: #ff1c55;
   font-size: 16px;
   font-weight: 600;
   margin: 0 0 8px 0;
 }
 
 .event-time {
-  color: #A3AED0;
+  color: #ffb3c7;
   font-size: 14px;
   display: flex;
   align-items: center;
@@ -634,8 +635,8 @@ body, html {
   display: inline-block;
   padding: 4px 12px;
   border-radius: 8px;
-  background: #F4F7FE;
-  color: #4318FF;
+  background: #ffe0e5;
+  color: #ff4b7c;
   font-size: 12px;
   margin-top: 8px;
   font-weight: 500;
@@ -648,7 +649,7 @@ body, html {
 }
 
 .invite-btn {
-  background: #4318FF;
+  background: #ff4b7c;
   color: white;
   border: none;
   padding: 8px 16px;
@@ -664,26 +665,29 @@ body, html {
 }
 
 .invite-btn:hover {
-  background: #3311CC;
+  background: #ff1c55;
   transform: translateY(-2px);
 }
 
 .delete-btn {
-  background: #FFE4E4;
-  color: #FF5252;
+  background: #ff1c55;
+  color: white;
   border: none;
-  padding: 8px;
+  padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
   transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
 .delete-btn:hover {
-  background: #FF5252;
-  color: white;
+  background: #ff4b7c;
+  transform: translateY(-2px);
 }
 
 /* Modal Styles */
@@ -722,19 +726,19 @@ body, html {
   gap: 12px;
   padding: 12px;
   border-radius: 14px;
-  background: #F4F7FE;
+  background: #ffe0e5;
   margin-bottom: 8px;
   transition: all 0.3s ease;
 }
 
 .alumnus-checkbox:hover {
-  background: #E0E5F2;
+  background: #ffccd4;
 }
 
 .alumnus-checkbox input[type="checkbox"] {
   width: 18px;
   height: 18px;
-  border: 2px solid #4318FF;
+  border: 2px solid #ff4b7c;
   border-radius: 4px;
   cursor: pointer;
 }
@@ -746,7 +750,7 @@ body, html {
 .form-group label {
   display: block;
   margin-bottom: 8px;
-  color: #2B3674;
+  color: #ff1c55;
   font-weight: 500;
 }
 
@@ -754,10 +758,10 @@ body, html {
 .form-group select {
   width: 100%;
   padding: 12px;
-  border: 1px solid #E0E5F2;
+  border: 1px solid #ffccd4;
   border-radius: 14px;
   font-size: 14px;
-  color: #2B3674;
+  color: #ff1c55;
 }
 
 .modal-actions {
@@ -768,8 +772,8 @@ body, html {
 }
 
 .cancel-btn {
-  background: #F4F7FE;
-  color: #2B3674;
+  background: #ffe0e5;
+  color: #ff1c55;
   border: none;
   padding: 12px 24px;
   border-radius: 14px;
@@ -778,7 +782,7 @@ body, html {
 }
 
 .submit-btn {
-  background: #4318FF;
+  background: #ff4b7c;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -916,5 +920,20 @@ body, html {
     max-width: 2000px;
     margin: 0 auto;
   }
+}
+
+/* Modern scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #ffe0e5;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ff4b7c;
+  border-radius: 4px;
 }
 </style>

@@ -102,8 +102,6 @@ export default {
 }
 </script>
 
-<!-- Template remains the same -->
-
 <style scoped>
 * {
   margin: 0;
@@ -121,7 +119,7 @@ body, html {
 .homepage {
   display: flex;
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: #fff5f7;
   font-family: 'Inter', sans-serif;
   overflow: hidden;
   width: 100%;
@@ -137,7 +135,7 @@ body, html {
   top: 0;
   bottom: 0;
   width: 280px;
-  background: linear-gradient(180deg, #2B3674 0%, #1A1F37 100%);
+  background: linear-gradient(180deg, #ff4b7c 0%, #ff1c55 100%);
   padding: 30px;
   color: white;
   display: flex;
@@ -176,7 +174,7 @@ body, html {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #A3AED0;
+  color: #ffb3c7;
   padding: 12px;
   border-radius: 14px;
   text-decoration: none;
@@ -184,7 +182,7 @@ body, html {
 }
 
 .nav-item:hover, .nav-item.active {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.2);
   color: white;
 }
 
@@ -192,7 +190,8 @@ body, html {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #FF5252;
+  color: #ffffff;
+  background-color: #ff1c55;
   text-decoration: none;
   padding: 12px;
   border-radius: 14px;
@@ -201,7 +200,7 @@ body, html {
 }
 
 .logout:hover {
-  background: rgba(255, 82, 82, 0.1);
+  background: #ff4b7c;
 }
 
 /* Main Content Styles */
@@ -226,14 +225,14 @@ body, html {
   background: white;
   padding: 24px;
   border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 20px rgba(255, 75, 124, 0.1);
   text-align: center;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 25px rgba(255, 75, 124, 0.15);
 }
 
 .card-icon {
@@ -249,25 +248,25 @@ body, html {
 }
 
 .card-icon.pink {
-  background: linear-gradient(135deg, #FF5C8E, #FF8FBB);
+  background: linear-gradient(135deg, #ff4b7c, #ff8faf);
 }
 
 .card-icon.green {
-  background: linear-gradient(135deg, #05CD99, #08F7BE);
+  background: linear-gradient(135deg, #ff6b98, #ff97b8);
 }
 
 .card-icon.purple {
-  background: linear-gradient(135deg, #4318FF, #868CFF);
+  background: linear-gradient(135deg, #ff4b7c, #ff799e);
 }
 
 .card h3 {
-  color: #A3AED0;
+  color: #ffb3c7;
   font-size: 14px;
   margin-bottom: 8px;
 }
 
 .card p {
-  color: #2B3674;
+  color: #ff1c55;
   font-size: 24px;
   font-weight: 700;
   margin-bottom: 16px;
@@ -275,8 +274,8 @@ body, html {
 
 .card-button {
   background: transparent;
-  color: #4318FF;
-  border: 1px solid #4318FF;
+  color: #ff4b7c;
+  border: 1px solid #ff4b7c;
   padding: 8px 24px;
   border-radius: 12px;
   font-weight: 500;
@@ -285,7 +284,7 @@ body, html {
 }
 
 .card-button:hover {
-  background: #4318FF;
+  background: #ff4b7c;
   color: white;
   transform: translateY(-2px);
 }
@@ -301,14 +300,14 @@ body, html {
   background: white;
   padding: 24px;
   border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 20px rgba(255, 75, 124, 0.1);
   min-height: 300px;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .chart-container:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 25px rgba(255, 75, 124, 0.15);
 }
 
 .chart-header {
@@ -319,7 +318,7 @@ body, html {
 }
 
 .chart-header h3 {
-  color: #2B3674;
+  color: #ff1c55;
   font-size: 18px;
   font-weight: 600;
 }
@@ -331,14 +330,14 @@ body, html {
 }
 
 .date-range {
-  color: #A3AED0;
+  color: #ffb3c7;
   font-size: 14px;
 }
 
 .more-btn {
   background: transparent;
   border: none;
-  color: #A3AED0;
+  color: #ffb3c7;
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 8px;
@@ -346,8 +345,8 @@ body, html {
 }
 
 .more-btn:hover {
-  background: #F4F7FE;
-  color: #2B3674;
+  background: #ffe0e5;
+  color: #ff1c55;
 }
 
 /* Responsive Styles */
@@ -451,5 +450,20 @@ body, html {
     max-width: 2000px;
     margin: 0 auto;
   }
+}
+
+/* Modern scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #ffe0e5;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ff4b7c;
+  border-radius: 4px;
 }
 </style>

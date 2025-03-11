@@ -1,10 +1,17 @@
 <template>
   <div class="contact-management">
+    <!-- Sidebar Toggle Button -->
+    <button class="menu-btn" @click="toggleSidebar">
+      {{ isSidebarOpen ? "✕" : "☰" }}
+    </button>
+
     <!-- Sidebar -->
     <aside :class="{ open: isSidebarOpen }" class="sidebar">
-      <div class="logo">
-        <img src="../assets/logo.png" alt="Logo" />
-        <h2>Alumni Connect</h2>
+      <div class="sidebar-header">
+        <div class="logo">
+          <img src="../assets/logo.png" alt="Logo" />
+          <h2>Alumni Connect</h2>
+        </div>
       </div>
       <nav class="nav-links">
         <router-link to="/home" class="nav-item">Home</router-link>
@@ -16,16 +23,28 @@
 
     <!-- Main Content -->
     <div class="main-content">
-      <button class="menu-btn" @click="toggleSidebar">☰</button>
       <h1>Manage Contacts</h1>
 
       <!-- Action Buttons -->
       <div class="actions">
         <button @click="handleNewContact">+ New</button>
         <button :disabled="!selectedContacts.length" @click="deleteContacts">Delete</button>
-        <input type="file" ref="fileInput" @change="importCSV" style="display: none;" />
+        <input type="file" ref="fileInput" @change="importCSV" style="display: none;" accept=".csv" />
         <button @click="triggerFileInput">Import</button>
         <button @click="exportCSV">Export</button>
+      </div>
+
+      <!-- Filter Tab -->
+      <div class="filter-tab">
+        <h3>Filters</h3>
+        <label>
+          Status:
+          <select v-model="filterStatus">
+            <option value="">All</option>
+            <option value="Contacted">Contacted</option>
+            <option value="Pending">Pending</option>
+          </select>
+        </label>
       </div>
 
       <!-- Search Bar -->
@@ -36,6 +55,7 @@
         <thead>
           <tr>
             <th><input type="checkbox" @change="toggleSelectAll" /></th>
+            <th>Alumni ID</th>
             <th>Name</th>
             <th>College</th>
             <th>Program</th>
@@ -46,6 +66,7 @@
         <tbody>
           <tr v-for="contact in paginatedContacts" :key="contact.id">
             <td><input type="checkbox" v-model="selectedContacts" :value="contact.id" @click.stop /></td>
+            <td>{{ contact.alumniId }}</td>
             <td @click="$router.push({ name: 'ContactDetail', params: { id: contact.id } })" class="clickable-name">
               {{ contact.name }}
             </td>
@@ -71,6 +92,7 @@
 import Papa from "papaparse";
 
 export default {
+  name: "ContactManagement",
   data() {
     return {
       contacts: [],
@@ -79,16 +101,19 @@ export default {
       currentPage: 1,
       pageSize: 10,
       isSidebarOpen: false,
+      filterStatus: "", // New filter status
     };
   },
   computed: {
     filteredContacts() {
       const search = this.searchTerm.toLowerCase();
-      return this.contacts.filter(contact =>
-        Object.values(contact).some(val =>
+      return this.contacts.filter(contact => {
+        const matchesSearch = Object.values(contact).some(val =>
           typeof val === "string" && val.toLowerCase().includes(search)
-        )
-      );
+        );
+        const matchesStatus = this.filterStatus ? contact.status === this.filterStatus : true;
+        return matchesSearch && matchesStatus;
+      });
     },
     totalPages() {
       return Math.ceil(this.filteredContacts.length / this.pageSize);
@@ -106,38 +131,50 @@ export default {
       localStorage.removeItem("user");
       this.$router.push("/");
     },
+    handleNewContact() {
+      // Add logic to create a new contact
+    },
+    triggerFileInput() {
+      this.$refs.fileInput.click();
+    },
     importCSV(event) {
       const file = event.target.files[0];
-      if (file) {
-        Papa.parse(file, {
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const csvData = Papa.parse(e.target.result, {
           header: true,
           skipEmptyLines: true,
-          complete: (results) => {
-            const newContacts = results.data.map((row, index) => ({
-              id: index + 1,
-              name: row.Name || "",
-              college: row.College || "",
-              program: row.Program || "",
-              email: row.Email || "",
-              status: row.Status || "Pending",
-            }));
-
-            localStorage.setItem("contacts", JSON.stringify(newContacts));
-            this.contacts = newContacts;
-          },
         });
-      }
+
+        if (csvData.data.length > 0) {
+          this.contacts = csvData.data.map((row, index) => ({
+            id: index + 1,
+            alumniId: row.AlumniID || "",
+            name: row.Name || "",
+            college: row.College || "",
+            program: row.Program || "",
+            email: row.Email || "",
+            status: row.Status || "Pending",
+          }));
+          localStorage.setItem("contacts", JSON.stringify(this.contacts));
+        }
+      };
+      reader.readAsText(file);
     },
     exportCSV() {
-      const csv = Papa.unparse(this.contacts);
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      if (this.contacts.length === 0) {
+        alert("No contacts to export!");
+        return;
+      }
+
+      const csvContent = Papa.unparse(this.contacts);
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = "contacts.csv";
       link.click();
-    },
-    triggerFileInput() {
-      this.$refs.fileInput.click();
     },
     goToPage(page) {
       if (page >= 1 && page <= this.totalPages) {
@@ -145,20 +182,15 @@ export default {
       }
     },
     toggleSelectAll(event) {
-      if (event.target.checked) {
-        this.selectedContacts = this.paginatedContacts.map(contact => contact.id);
-      } else {
-        this.selectedContacts = [];
-      }
+      this.selectedContacts = event.target.checked ? this.paginatedContacts.map(c => c.id) : [];
     },
     deleteContacts() {
-      if (this.selectedContacts.length === 0) return;
+      if (!this.selectedContacts.length) return;
 
-      this.contacts = this.contacts.filter(contact => !this.selectedContacts.includes(contact.id));
+      this.contacts = this.contacts.filter(c => !this.selectedContacts.includes(c.id));
       this.selectedContacts = [];
-
       localStorage.setItem("contacts", JSON.stringify(this.contacts));
-    }
+    },
   },
   created() {
     const savedContacts = localStorage.getItem("contacts");
@@ -169,27 +201,25 @@ export default {
 };
 </script>
 
-
-
 <style scoped>
 .contact-management {
   display: flex;
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: #FFF5F7;
   font-family: 'Inter', sans-serif;
 }
 
 /* Sidebar Styles */
 .sidebar {
-  width: 280px;
+  width: 180px;
   height: 100vh;
-  background: linear-gradient(180deg, #2B3674 0%, #1A1F37 100%);
+  background: linear-gradient(180deg, #FF4B6E 0%, #E63456 100%);
   color: white;
   position: fixed;
   top: 0;
-  left: -280px;
-  transition: all 0.3s ease;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+  left: -250px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 30px rgba(255, 75, 110, 0.15);
   z-index: 1000;
   padding: 30px;
   display: flex;
@@ -200,97 +230,119 @@ export default {
   left: 0;
 }
 
-.sidebar .logo {
+/* Sidebar Header */
+.sidebar-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 15px;
   margin-bottom: 40px;
 }
 
-.sidebar .logo img {
+/* Move "Alumni Connect" lower to avoid overlap with the button */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 80px; /* Adjusted to move below the toggle button */
+}
+
+.logo img {
   width: 45px;
   height: auto;
   filter: brightness(0) invert(1);
 }
 
-.sidebar .logo h2 {
+.logo h2 {
   font-size: 20px;
   font-weight: 600;
+  margin: 0;
+  color: white;
 }
 
+/* Sidebar Navigation */
 .nav-links {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
   margin: 20px 0;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  padding: 12px;
-  color: #A3AED0;
+  padding: 14px;
+  color: rgba(255, 255, 255, 0.8);
   text-decoration: none;
-  border-radius: 14px;
+  border-radius: 16px;
   transition: all 0.3s ease;
+  font-weight: 500;
 }
 
 .nav-item.active, .nav-item:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15);
   color: white;
+  transform: translateX(5px);
 }
 
+/* Logout Button */
 .logout-btn {
   margin-top: auto;
-  padding: 12px;
-  background-color: rgba(255, 82, 82, 0.1);
-  color: #FF5252;
+  padding: 14px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
   border: none;
-  border-radius: 14px;
+  border-radius: 16px;
   cursor: pointer;
   font-weight: 500;
   transition: all 0.3s ease;
 }
 
 .logout-btn:hover {
-  background-color: rgba(255, 82, 82, 0.2);
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
 }
 
-/* Main Content Styles */
-.main-content {
-  flex: 1;
-  margin-left: 0;
-  padding: 30px;
-  transition: all 0.3s ease;
-}
-
+/* Sidebar Toggle Button */
 .menu-btn {
   position: fixed;
   top: 20px;
   left: 20px;
   z-index: 1001;
-  background: #4318FF;
+  background: #FF4B6E;
   color: white;
   border: none;
   padding: 12px;
-  border-radius: 12px;
+  border-radius: 16px;
   cursor: pointer;
-  width: 45px;
-  height: 45px;
+  width: 48px;
+  height: 48px;
   font-size: 20px;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(67, 24, 255, 0.15);
+  box-shadow: 0 4px 15px rgba(255, 75, 110, 0.2);
 }
 
 .menu-btn:hover {
-  background: #2B3674;
+  background: #E63456;
   transform: translateY(-2px);
 }
 
+/* Main Content */
+.main-content {
+  flex: 1;
+  padding: 40px;
+  transition: all 0.3s ease;
+  margin-left: 0;
+}
+
+.sidebar.open + .main-content {
+  margin-left: 250px;
+}
+
+/* Headings */
 h1 {
-  color: #2B3674;
-  font-size: 24px;
-  font-weight: 600;
+  color: #2D1E2F;
+  font-size: 28px;
+  font-weight: 700;
   margin-bottom: 30px;
   margin-left: 60px;
 }
@@ -299,15 +351,15 @@ h1 {
 .actions {
   display: flex;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 30px;
   margin-left: 60px;
 }
 
 .actions button {
-  padding: 10px 20px;
+  padding: 12px 24px;
   border: none;
-  border-radius: 12px;
-  font-weight: 500;
+  border-radius: 16px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
@@ -316,18 +368,20 @@ h1 {
 }
 
 .actions button:first-child {
-  background: #4318FF;
+  background: #FF4B6E;
   color: white;
+  box-shadow: 0 4px 15px rgba(255, 75, 110, 0.2);
 }
 
 .actions button:not(:first-child) {
-  background: #E9EDF7;
-  color: #2B3674;
+  background: white;
+  color: #2D1E2F;
+  border: 1px solid #FFD6DE;
 }
 
 .actions button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(255, 75, 110, 0.15);
 }
 
 .actions button:disabled {
@@ -335,64 +389,90 @@ h1 {
   cursor: not-allowed;
 }
 
+/* Filter Tab */
+.filter-tab {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.filter-tab h3 {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  color: #2D1E2F;
+}
+
+.filter-tab label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  color: #6B4E5B;
+}
+
+.filter-tab select {
+  padding: 8px;
+  border: 1px solid #FFD6DE;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #2D1E2F;
+}
+
 /* Search Bar */
 .search-bar {
   width: calc(100% - 60px);
   margin-left: 60px;
-  padding: 12px 20px;
-  border: 1px solid #E0E5F2;
-  border-radius: 14px;
-  margin-bottom: 24px;
-  font-size: 14px;
+  padding: 16px 24px;
+  border: 1px solid #FFD6DE;
+  border-radius: 16px;
+  margin-bottom: 30px;
+  font-size: 15px;
   transition: all 0.3s ease;
+  background: white;
 }
 
 .search-bar:focus {
   outline: none;
-  border-color: #4318FF;
-  box-shadow: 0 0 0 3px rgba(67, 24, 255, 0.1);
+  border-color: #FF4B6E;
+  box-shadow: 0 0 0 3px rgba(255, 75, 110, 0.1);
 }
 
-/* Table Styles */
+/* Table */
 table {
   width: calc(100% - 60px);
   margin-left: 60px;
   border-collapse: separate;
   border-spacing: 0;
   background: white;
-  border-radius: 20px;
+  border-radius: 24px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 25px rgba(255, 75, 110, 0.08);
 }
 
 th, td {
-  padding: 16px;
+  padding: 18px;
   text-align: left;
-  border-bottom: 1px solid #E0E5F2;
+  border-bottom: 1px solid #FFD6DE;
 }
 
 th {
-  background-color: #F8F9FF;
-  color: #2B3674;
+  background-color: #FFF5F7;
+  color: #2D1E2F;
   font-weight: 600;
   font-size: 14px;
 }
 
 td {
-  color: #2B3674;
+  color: #6B4E5B;
   font-size: 14px;
 }
 
 tr:hover {
-  background-color: #F8F9FF;
-  cursor: pointer;
-}
-
-/* Checkbox Styles */
-input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  border-radius: 6px;
+  background-color: #FFF5F7;
   cursor: pointer;
 }
 
@@ -402,24 +482,25 @@ input[type="checkbox"] {
   align-items: center;
   justify-content: center;
   gap: 16px;
-  margin-top: 24px;
+  margin-top: 30px;
   margin-left: 60px;
 }
 
 .pagination button {
-  padding: 8px 16px;
-  border: 1px solid #E0E5F2;
-  border-radius: 12px;
+  padding: 10px 20px;
+  border: 1px solid #FFD6DE;
+  border-radius: 16px;
   background: white;
-  color: #2B3674;
+  color: #2D1E2F;
   cursor: pointer;
   transition: all 0.3s ease;
+  font-weight: 500;
 }
 
 .pagination button:hover:not(:disabled) {
-  background: #4318FF;
+  background: #FF4B6E;
   color: white;
-  border-color: #4318FF;
+  border-color: #FF4B6E;
 }
 
 .pagination button:disabled {
@@ -428,7 +509,7 @@ input[type="checkbox"] {
 }
 
 .pagination span {
-  color: #2B3674;
+  color: #2D1E2F;
   font-weight: 500;
 }
 

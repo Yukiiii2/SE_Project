@@ -1,7 +1,7 @@
 <template>
   <div class="chart-wrapper">
     <div class="chart-header">
-      <h3>Contact Growth</h3>
+      <h3 class="chart-title">Contact Growth</h3>
       <div class="time-filter">
         <button :class="{ active: selectedPeriod === 'weekly' }" @click="updatePeriod('weekly')">Weekly</button>
         <button :class="{ active: selectedPeriod === 'monthly' }" @click="updatePeriod('monthly')">Monthly</button>
@@ -53,7 +53,7 @@ export default {
             {
               label: "Total Contacts",
               data: [420, 380, 450, 520, 480],
-              backgroundColor: "#4318FF",
+              backgroundColor: "#FF5C8E",
               borderRadius: 8,
               barThickness: 20,
               maxBarThickness: 25,
@@ -61,7 +61,7 @@ export default {
             {
               label: "Active Contacts",
               data: [350, 320, 380, 450, 400],
-              backgroundColor: "#6AD2FF",
+              backgroundColor: "#FF8FBB",
               borderRadius: 8,
               barThickness: 20,
               maxBarThickness: 25,
@@ -93,7 +93,7 @@ export default {
               backgroundColor: "#ffffff",
               titleColor: "#2B3674",
               bodyColor: "#2B3674",
-              borderColor: "#E2E8F0",
+              borderColor: "#FF5C8E",
               borderWidth: 1,
               padding: 12,
               cornerRadius: 8,
@@ -124,7 +124,7 @@ export default {
             },
             y: {
               grid: {
-                color: "#E2E8F0",
+                color: "#FF8FBB",
                 drawBorder: false
               },
               ticks: {
@@ -155,6 +155,9 @@ export default {
 .chart-wrapper {
   height: 400px;
   padding: 20px;
+  background: #FFF5F7;
+  border-radius: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .chart-header {
@@ -164,8 +167,8 @@ export default {
   margin-bottom: 24px;
 }
 
-.chart-header h3 {
-  color: #2B3674;
+.chart-header .chart-title {
+  color: #FF4B6E; /* Updated to match the Alumni Distribution text color */
   font-size: 18px;
   font-weight: 600;
   margin: 0;
@@ -192,7 +195,7 @@ export default {
 }
 
 .time-filter button.active {
-  background: #4318FF;
+  background: #FF5C8E;
   color: white;
 }
 
