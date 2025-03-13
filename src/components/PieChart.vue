@@ -44,7 +44,7 @@ export default {
         datasets: [
           {
             data: [1892, 189, 38],
-            backgroundColor: ['#FF5C8E', '#FF8FBB', '#FFD1DC'],
+            backgroundColor: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#8B00FF'], // Rainbow colors
             borderWidth: 0,
             cutout: '75%',
             borderRadius: 20,
@@ -130,12 +130,12 @@ export default {
 }
 
 .legend-label {
-  color: #A3AED0;
+  color: #000000; /* Updated to black */
   flex-grow: 1;
 }
 
 .legend-value {
-  color: #FF4B6E; /* Updated to match the Member Status text color */
+  color: #000000; /* Updated to black */
   font-weight: 600;
 }
 

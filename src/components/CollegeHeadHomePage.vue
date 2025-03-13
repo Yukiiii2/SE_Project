@@ -318,7 +318,7 @@ body, html {
 }
 
 .chart-header h3 {
-  color: #ff1c55;
+  color: #000;
   font-size: 18px;
   font-weight: 600;
 }
@@ -330,7 +330,7 @@ body, html {
 }
 
 .date-range {
-  color: #ffb3c7;
+  color: #000; /* Updated to black */
   font-size: 14px;
 }
 

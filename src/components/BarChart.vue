@@ -81,7 +81,7 @@ export default {
                 boxWidth: 8,
                 boxHeight: 8,
                 padding: 20,
-                color: "#A3AED0",
+                color: "#000000", // Updated to black
                 font: {
                   family: "'Inter', sans-serif",
                   size: 12
@@ -115,7 +115,7 @@ export default {
                 display: false
               },
               ticks: {
-                color: "#A3AED0",
+                color: "#000000", // Updated to black
                 font: {
                   family: "'Inter', sans-serif",
                   size: 12
@@ -128,7 +128,7 @@ export default {
                 drawBorder: false
               },
               ticks: {
-                color: "#A3AED0",
+                color: "#000000", // Updated to black
                 font: {
                   family: "'Inter', sans-serif",
                   size: 12
@@ -168,7 +168,7 @@ export default {
 }
 
 .chart-header .chart-title {
-  color: #FF4B6E; /* Updated to match the Alumni Distribution text color */
+  color: #000000; /* Updated to black */
   font-size: 18px;
   font-weight: 600;
   margin: 0;
