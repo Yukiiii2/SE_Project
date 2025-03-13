@@ -1,56 +1,32 @@
 <template>
   <div class="contact-management">
-    <!-- Sidebar Toggle Button -->
-    <button class="menu-btn" @click="toggleSidebar">
-      {{ isSidebarOpen ? "✕" : "☰" }}
-    </button>
-
-    <!-- Sidebar -->
-    <aside :class="{ open: isSidebarOpen }" class="sidebar">
+    <button class="menu-btn" @click="toggleSidebar">☰</button>
+    <div :class="['sidebar', { open: isSidebarOpen }]">
       <div class="sidebar-header">
         <div class="logo">
-          <img src="../assets/logo.png" alt="Logo" />
+          <img src="@/assets/logo.png" alt="Logo" /> <!-- Correct logo path -->
           <h2>Alumni Connect</h2>
         </div>
       </div>
       <nav class="nav-links">
-        <router-link to="/home" class="nav-item">Home</router-link>
-        <router-link to="/contacts" class="nav-item active">Contacts</router-link>
-        <router-link to="/events" class="nav-item">Events</router-link>
+        <router-link to="/" class="nav-item" active-class="active">Home</router-link>
+        <router-link to="/contacts" class="nav-item" active-class="active">Contacts</router-link>
+        <router-link to="/events" class="nav-item" active-class="active">Events</router-link>
+        <router-link to="/archive" class="nav-item" active-class="active">Archive</router-link>
+        <router-link to="/requests" class="nav-item" active-class="active">Requests</router-link>
       </nav>
       <button class="logout-btn" @click="handleLogout">Logout</button>
-    </aside>
-
-    <!-- Main Content -->
+    </div>
     <div class="main-content">
       <h1>Manage Contacts</h1>
-
-      <!-- Action Buttons -->
       <div class="actions">
         <button @click="handleNewContact">+ New</button>
-        <button :disabled="!selectedContacts.length" @click="deleteContacts">Delete</button>
-        <input type="file" ref="fileInput" @change="importCSV" style="display: none;" accept=".csv" />
+        <button @click="deleteContacts" :disabled="!selectedContacts.length">Delete</button>
         <button @click="triggerFileInput">Import</button>
         <button @click="exportCSV">Export</button>
+        <input type="file" ref="fileInput" @change="importCSV" style="display: none;" />
       </div>
-
-      <!-- Filter Tab -->
-      <div class="filter-tab">
-        <h3>Filters</h3>
-        <label>
-          Status:
-          <select v-model="filterStatus">
-            <option value="">All</option>
-            <option value="Contacted">Contacted</option>
-            <option value="Pending">Pending</option>
-          </select>
-        </label>
-      </div>
-
-      <!-- Search Bar -->
-      <input v-model="searchTerm" type="text" placeholder="Search contacts..." class="search-bar" />
-
-      <!-- Contacts Table -->
+      <input type="text" class="search-bar" v-model="searchTerm" placeholder="Search contacts..." />
       <table>
         <thead>
           <tr>
@@ -60,25 +36,23 @@
             <th>College</th>
             <th>Program</th>
             <th>Email</th>
+            <th>Occupation</th>
             <th>Status</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="contact in paginatedContacts" :key="contact.id">
-            <td><input type="checkbox" v-model="selectedContacts" :value="contact.id" @click.stop /></td>
-            <td>{{ contact.alumniId }}</td>
-            <td @click="$router.push({ name: 'ContactDetail', params: { id: contact.id } })" class="clickable-name">
-              {{ contact.name }}
-            </td>
+            <td><input type="checkbox" :value="contact.id" v-model="selectedContacts" /></td>
+            <td>{{ contact.Alumni_ID }}</td>
+            <td>{{ contact.Alumni_Firstname }} {{ contact.Alumni_Lastname }}</td>
             <td>{{ contact.college }}</td>
-            <td>{{ contact.program }}</td>
-            <td>{{ contact.email }}</td>
-            <td><span :class="'status-badge ' + contact.status.toLowerCase()">{{ contact.status }}</span></td>
+            <td>{{ contact.Program }}</td>
+            <td>{{ contact.Email }}</td>
+            <td>{{ contact.Occupation }}</td>
+            <td>{{ contact.Status }}</td>
           </tr>
         </tbody>
       </table>
-
-      <!-- Pagination -->
       <div class="pagination">
         <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1">Previous</button>
         <span>Page {{ currentPage }} of {{ totalPages }}</span>
@@ -88,117 +62,183 @@
   </div>
 </template>
 
-<script>
-import Papa from "papaparse";
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import Papa from 'papaparse';
+import { createClient } from '@supabase/supabase-js';
 
-export default {
-  name: "ContactManagement",
-  data() {
-    return {
-      contacts: [],
-      searchTerm: "",
-      selectedContacts: [],
-      currentPage: 1,
-      pageSize: 10,
-      isSidebarOpen: false,
-      filterStatus: "", // New filter status
-    };
-  },
-  computed: {
-    filteredContacts() {
-      const search = this.searchTerm.toLowerCase();
-      return this.contacts.filter(contact => {
-        const matchesSearch = Object.values(contact).some(val =>
-          typeof val === "string" && val.toLowerCase().includes(search)
-        );
-        const matchesStatus = this.filterStatus ? contact.status === this.filterStatus : true;
-        return matchesSearch && matchesStatus;
-      });
-    },
-    totalPages() {
-      return Math.ceil(this.filteredContacts.length / this.pageSize);
-    },
-    paginatedContacts() {
-      const start = (this.currentPage - 1) * this.pageSize;
-      return this.filteredContacts.slice(start, start + this.pageSize);
-    },
-  },
-  methods: {
-    toggleSidebar() {
-      this.isSidebarOpen = !this.isSidebarOpen;
-    },
-    handleLogout() {
-      localStorage.removeItem("user");
-      this.$router.push("/");
-    },
-    handleNewContact() {
-      // Add logic to create a new contact
-    },
-    triggerFileInput() {
-      this.$refs.fileInput.click();
-    },
-    importCSV(event) {
-      const file = event.target.files[0];
-      if (!file) return;
+// Initialize Supabase client
+const supabaseUrl = 'https://htxybqylbdrlciccxarx.supabase.co'; // Correct URL
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0eHlicXlsYmRybGVpY2N4YXJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE2NzExMzYsImV4cCI6MjA1NzI0NzEzNn0.oeW9jIah3KzsSLeQvACdG-TmL9SpiTr3sKgmaVS3hJY'; // Correct Key
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const csvData = Papa.parse(e.target.result, {
-          header: true,
-          skipEmptyLines: true,
-        });
+const contacts = ref([]);
+const searchTerm = ref('');
+const selectedContacts = ref([]);
+const currentPage = ref(1);
+const pageSize = ref(10);
+const isSidebarOpen = ref(false);
+const filterKey = ref('all'); // Default filter key
+const filterValue = ref(''); // Filter value
+const fileInput = ref(null); // Reference for file input
 
-        if (csvData.data.length > 0) {
-          this.contacts = csvData.data.map((row, index) => ({
-            id: index + 1,
-            alumniId: row.AlumniID || "",
-            name: row.Name || "",
-            college: row.College || "",
-            program: row.Program || "",
-            email: row.Email || "",
-            status: row.Status || "Pending",
-          }));
-          localStorage.setItem("contacts", JSON.stringify(this.contacts));
-        }
-      };
-      reader.readAsText(file);
-    },
-    exportCSV() {
-      if (this.contacts.length === 0) {
-        alert("No contacts to export!");
-        return;
-      }
+const filteredContacts = computed(() => {
+  const search = searchTerm.value.toLowerCase();
+  return contacts.value.filter(contact => {
+    const matchesSearch = Object.values(contact).some(val =>
+      typeof val === 'string' && val.toLowerCase().includes(search)
+    );
+    const matchesFilter = filterKey.value === 'all' || !filterValue.value
+      ? Object.values(contact).some(val =>
+          typeof val === 'string' && val.toLowerCase().includes(filterValue.value.toLowerCase())
+        )
+      : contact[filterKey.value] && contact[filterKey.value].toLowerCase().includes(filterValue.value.toLowerCase());
+    return matchesSearch && matchesFilter;
+  });
+});
 
-      const csvContent = Papa.unparse(this.contacts);
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "contacts.csv";
-      link.click();
-    },
-    goToPage(page) {
-      if (page >= 1 && page <= this.totalPages) {
-        this.currentPage = page;
-      }
-    },
-    toggleSelectAll(event) {
-      this.selectedContacts = event.target.checked ? this.paginatedContacts.map(c => c.id) : [];
-    },
-    deleteContacts() {
-      if (!this.selectedContacts.length) return;
+const totalPages = computed(() => Math.ceil(filteredContacts.value.length / pageSize.value));
 
-      this.contacts = this.contacts.filter(c => !this.selectedContacts.includes(c.id));
-      this.selectedContacts = [];
-      localStorage.setItem("contacts", JSON.stringify(this.contacts));
-    },
-  },
-  created() {
-    const savedContacts = localStorage.getItem("contacts");
-    if (savedContacts) {
-      this.contacts = JSON.parse(savedContacts);
-    }
-  },
+const paginatedContacts = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  return filteredContacts.value.slice(start, start + pageSize.value);
+});
+
+const toggleSidebar = () => {
+  isSidebarOpen.value = !isSidebarOpen.value;
 };
+
+const handleLogout = () => {
+  localStorage.removeItem('user');
+  this.$router.push('/');
+};
+
+const handleNewContact = () => {
+  // Add logic to create a new contact
+};
+
+const triggerFileInput = () => {
+  fileInput.value.click();
+};
+
+const importCSV = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const csvData = Papa.parse(e.target.result, {
+      header: true,
+      skipEmptyLines: true,
+    });
+
+    if (csvData.data.length > 0) {
+      const newContacts = csvData.data.map((row) => ({
+        Alumni_ID: row.Alumni_ID || '',
+        Alumni_Firstname: row.Alumni_Firstname || '',
+        Alumni_Lastname: row.Alumni_Lastname || '',
+        college: row.college || '',
+        Year_Graduated: row.Year_Graduated || null,
+        Program: row.Program || '',
+        Email: row.Email || '',
+        Occupation: row.Occupation || '',
+        Status: row.Status || '',
+      }));
+
+      console.log('New Contacts:', newContacts);
+
+      // Insert new contacts into Supabase
+      const { data, error } = await supabase
+        .from('alumni_table')
+        .insert(newContacts);
+
+      if (error) {
+        console.error('Error inserting contacts:', error.message);
+      } else {
+        console.log('Inserted Contacts:', data);
+
+        // Fetch updated contacts from Supabase
+        const { data: updatedContacts, error: fetchError } = await supabase
+          .from('alumni_table')
+          .select('*');
+
+        if (fetchError) {
+          console.error('Error fetching contacts:', fetchError.message);
+        } else {
+          console.log('Updated Contacts:', updatedContacts);
+          contacts.value = updatedContacts;
+        }
+      }
+    }
+  };
+  reader.readAsText(file);
+};
+
+const exportCSV = () => {
+  if (contacts.value.length === 0) {
+    alert('No contacts to export!');
+    return;
+  }
+
+  const csvContent = Papa.unparse(contacts.value);
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'contacts.csv';
+  link.click();
+};
+
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page;
+  }
+};
+
+const toggleSelectAll = (event) => {
+  selectedContacts.value = event.target.checked ? paginatedContacts.value.map(c => c.id) : [];
+};
+
+const deleteContacts = async () => {
+  if (!selectedContacts.value.length) return;
+
+  const archivedContacts = JSON.parse(localStorage.getItem('archivedContacts') || '[]');
+  const toArchive = contacts.value.filter(c => selectedContacts.value.includes(c.id));
+
+  // Move to archive
+  const updatedArchivedContacts = [...archivedContacts, ...toArchive];
+  localStorage.setItem('archivedContacts', JSON.stringify(updatedArchivedContacts));
+
+  // Remove from active contacts
+  const { error } = await supabase
+    .from('alumni_table')
+    .delete()
+    .in('id', selectedContacts.value);
+
+  if (error) {
+    console.error('Error deleting contacts:', error.message);
+  } else {
+    contacts.value = contacts.value.filter(c => !selectedContacts.value.includes(c.id));
+    selectedContacts.value = [];
+  }
+};
+
+// eslint-disable-next-line no-unused-vars
+const navigateToArchive = () => {
+  this.$router.push('/archive');
+};
+
+onMounted(async () => {
+  const { data: fetchedContacts, error } = await supabase
+    .from('alumni_table')
+    .select('*');
+
+  if (error) {
+    console.error('Error fetching contacts:', error.message);
+  } else {
+    console.log('Fetched Contacts:', fetchedContacts);
+    contacts.value = fetchedContacts;
+  }
+});
 </script>
 
 <style scoped>
@@ -414,7 +454,8 @@ h1 {
   color: #6B4E5B;
 }
 
-.filter-tab select {
+.filter-tab select,
+.filter-tab input {
   padding: 8px;
   border: 1px solid #FFD6DE;
   border-radius: 8px;

@@ -13,22 +13,10 @@
         <h1 class="login-title">Welcome Back</h1>
         <form @submit.prevent="handleLogin">
           <div class="input-group">
-            <input
-              type="email"
-              placeholder="Email"
-              class="input-field"
-              v-model="email"
-              required
-            />
+            <input type="email" placeholder="Email" class="input-field" v-model="email" required />
           </div>
           <div class="input-group">
-            <input
-              type="password"
-              placeholder="Password"
-              class="input-field"
-              v-model="password"
-              required
-            />
+            <input type="password" placeholder="Password" class="input-field" v-model="password" required />
           </div>
           <button type="submit" class="login-button">Sign In</button>
           <p v-if="error" class="error-message">{{ error }}</p>
@@ -48,18 +36,25 @@ export default {
     return {
       email: "",
       password: "",
-      error: ""
+      error: "",
+      users: [
+        { email: "admin@admin.com", password: "admin123", role: "alumniCoordinator" },
+        { email: "collegehead@admin.com", password: "college123", role: "collegeHead" }
+      ]
     };
   },
   methods: {
     handleLogin() {
-      // Dummy credentials
-      const correctEmail = "admin@admin.com";
-      const storedPassword = localStorage.getItem(`password_${correctEmail}`) || "admin123";
-
-      if (this.email === correctEmail && this.password === storedPassword) {
-        localStorage.setItem("user", JSON.stringify({ email: this.email }));
-        this.$router.push("/home"); // Redirect to home page
+      const user = this.users.find(u => u.email === this.email && u.password === this.password);
+      if (user) {
+        localStorage.setItem("user", JSON.stringify({ email: user.email, role: user.role }));
+        
+        // Redirect based on role
+        if (user.role === "alumniCoordinator") {
+          this.$router.push("/home");
+        } else if (user.role === "collegeHead") {
+          this.$router.push("/college-home");
+        }
       } else {
         this.error = "Invalid email or password!";
       }

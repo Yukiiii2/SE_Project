@@ -15,15 +15,7 @@
           <i class="fas fa-cog"></i>
           <span>Contacts</span>
         </router-link>
-        <router-link to="/events" class="nav-item">
-          <i class="fas fa-calendar"></i>
-          <span>Events</span>
-        </router-link>
-        <router-link to="/archive" class="nav-item">
-          <i class="fas fa-archive"></i>
-          <span>Archive</span>
-        </router-link>
-        <router-link to="/approve-requests" class="nav-item">
+        <router-link to="/requests" class="nav-item">
           <i class="fas fa-envelope"></i>
           <span>Requests</span>
         </router-link>
@@ -96,7 +88,7 @@ import BarChart from './BarChart.vue'
 import PieChart from './PieChart.vue'
 
 export default {
-  name: 'HomePage',
+  name: 'CollegeHeadHomePage',
   components: {
     BarChart,
     PieChart

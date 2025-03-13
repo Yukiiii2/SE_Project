@@ -19,6 +19,14 @@
           <i class="fas fa-calendar"></i>
           <span>Events</span>
         </router-link>
+        <router-link to="/archive" class="nav-item">
+          <i class="fas fa-archive"></i>
+          <span>Archive</span>
+        </router-link>
+        <router-link to="/requests" class="nav-item">
+          <i class="fas fa-envelope"></i>
+          <span>Requests</span>
+        </router-link>
       </nav>
       <a href="#" class="logout" @click.prevent="handleLogout">
         <i class="fas fa-sign-out-alt"></i>
@@ -101,11 +109,31 @@
                 <i class="fas fa-user-plus"></i> Invite Alumni
               </button>
               <button class="delete-btn" @click="deleteEvent(event.id)">
-  <i class="fas fa-trash"></i> Delete Event
-</button>
+                <i class="fas fa-trash"></i> Delete Event
+              </button>
             </div>
           </div>
         </div>
+      </section>
+
+      <!-- Calendar View Section -->
+      <section class="calendar-section">
+        <vue-cal
+          :events="calendarEvents"
+          :disable-views="['years', 'year', 'month']"
+          default-view="week"
+          @event-click="handleEventClick"
+          :on-event-create="false"
+          :on-event-drag="false"
+          :on-event-resize="false"
+        >
+          <template v-slot:event="{ event }">
+            <div class="custom-event">
+              <strong>{{ event.title }}</strong>
+              <p>{{ event.content }}</p>
+            </div>
+          </template>
+        </vue-cal>
       </section>
     </main>
 
@@ -174,9 +202,16 @@
     </div>
   </div>
 </template>
+
 <script>
+import VueCal from 'vue-cal';
+import 'vue-cal/dist/vuecal.css';
+
 export default {
   name: 'EventManagement',
+  components: {
+    VueCal
+  },
   data() {
     return {
       events: [
@@ -235,6 +270,14 @@ export default {
         const matchesType = !this.selectedEventType || event.type === this.selectedEventType;
         return matchesSearch && matchesType;
       });
+    },
+    calendarEvents() {
+      return this.events.map(event => ({
+        start: `${event.date} ${event.time}`,
+        end: `${event.date} ${event.time}`,
+        title: event.name,
+        content: event.type
+      }));
     }
   },
   methods: {
@@ -305,6 +348,12 @@ export default {
     handleLogout() {
       localStorage.removeItem('user');
       this.$router.push('/');
+    },
+    navigateToArchive() {
+      this.$router.push('/archive');
+    },
+    handleEventClick(event) {
+      alert(`Event: ${event.title}`);
     }
   }
 };
@@ -361,13 +410,13 @@ body, html {
 }
 
 .logo img {
-  width: 45px;
+  width: 60px; /* Increased size */
   height: auto;
   filter: brightness(0) invert(1);
 }
 
 .logo h2 {
-  font-size: 20px;
+  font-size: 24px; /* Increased size */
   font-weight: 600;
   color: white;
 }
@@ -387,6 +436,7 @@ body, html {
   border-radius: 14px;
   text-decoration: none;
   transition: all 0.3s ease;
+  font-size: 18px; /* Increased size */
 }
 
 .nav-item:hover, .nav-item.active {
@@ -405,6 +455,7 @@ body, html {
   border-radius: 14px;
   margin-top: auto;
   transition: all 0.3s ease;
+  font-size: 18px; /* Increased size */
 }
 
 .logout:hover {
@@ -415,7 +466,7 @@ body, html {
 .main-content {
   flex: 1;
   margin-left: 280px;
-  padding: 30px;
+  padding: 40px; /* Increased padding */
   overflow-y: auto;
   min-width: 0;
   width: calc(100% - 280px);
@@ -431,21 +482,21 @@ body, html {
 
 .card {
   background: white;
-  padding: 24px;
+  padding: 32px; /* Increased padding */
   border-radius: 20px;
   box-shadow: 0 4px 20px rgba(255, 75, 124, 0.1);
   text-align: center;
 }
 
 .card-icon {
-  width: 60px;
-  height: 60px;
+  width: 70px; /* Increased size */
+  height: 70px; /* Increased size */
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 16px;
-  font-size: 24px;
+  font-size: 28px; /* Increased size */
   color: white;
 }
 
@@ -462,14 +513,14 @@ body, html {
 }
 
 .card h3 {
-  color: #ffb3c7;
-  font-size: 14px;
+  color: black; /* Changed to black */
+  font-size: 18px; /* Increased size */
   margin-bottom: 8px;
 }
 
 .card p {
-  color: #ff1c55;
-  font-size: 24px;
+  color: black; /* Changed to black */
+  font-size: 28px; /* Increased size */
   font-weight: 700;
   margin-bottom: 0;
 }
@@ -477,7 +528,7 @@ body, html {
 /* Events Section Styles */
 .events-section {
   background: white;
-  padding: 24px;
+  padding: 32px; /* Increased padding */
   border-radius: 20px;
   box-shadow: 0 4px 20px rgba(255, 75, 124, 0.1);
 }
@@ -493,14 +544,14 @@ body, html {
 
 .section-header h2 {
   color: #ff1c55;
-  font-size: 20px;
+  font-size: 24px; /* Increased size */
   font-weight: 600;
   margin: 0;
 }
 
 .section-header p {
   color: #ffb3c7;
-  font-size: 14px;
+  font-size: 16px; /* Increased size */
   margin: 4px 0 0 0;
 }
 
@@ -508,7 +559,7 @@ body, html {
   background: #ff4b7c;
   color: white;
   border: none;
-  padding: 12px 24px;
+  padding: 14px 28px; /* Increased padding */
   border-radius: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -516,6 +567,7 @@ body, html {
   align-items: center;
   gap: 8px;
   transition: all 0.3s ease;
+  font-size: 16px; /* Increased size */
 }
 
 .create-button:hover {
@@ -535,7 +587,7 @@ body, html {
   display: flex;
   align-items: center;
   background: #ffe0e5;
-  padding: 12px 16px;
+  padding: 14px 18px; /* Increased padding */
   border-radius: 14px;
   border: 1px solid #ffccd4;
 }
@@ -551,17 +603,17 @@ body, html {
   background: transparent;
   width: 100%;
   color: #ff1c55;
-  font-size: 14px;
+  font-size: 16px; /* Increased size */
 }
 
 .filter-select {
-  padding: 12px 16px;
+  padding: 14px 18px; /* Increased padding */
   border: 1px solid #ffccd4;
   border-radius: 14px;
   color: #ff1c55;
   background: white;
   min-width: 200px;
-  font-size: 14px;
+  font-size: 16px; /* Increased size */
   cursor: pointer;
 }
 
@@ -569,15 +621,15 @@ body, html {
 .events-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 24px;
+  gap: 20px;
 }
 
 .event-card {
   background: white;
   border-radius: 20px;
-  padding: 20px;
+  padding: 24px; /* Increased padding */
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr;
   gap: 16px;
   border: 1px solid #ffccd4;
   transition: all 0.3s ease;
@@ -593,21 +645,21 @@ body, html {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px;
+  padding: 14px; /* Increased padding */
   border-radius: 12px;
   background: #ffe0e5;
-  min-width: 60px;
+  min-width: 70px; /* Increased size */
 }
 
 .event-date .day {
-  font-size: 24px;
+  font-size: 28px; /* Increased size */
   font-weight: 700;
   color: #ff1c55;
   line-height: 1;
 }
 
 .event-date .month {
-  font-size: 12px;
+  font-size: 14px; /* Increased size */
   color: #ffb3c7;
   margin-top: 4px;
 }
@@ -618,14 +670,14 @@ body, html {
 
 .event-details h3 {
   color: #ff1c55;
-  font-size: 16px;
+  font-size: 18px; /* Increased size */
   font-weight: 600;
   margin: 0 0 8px 0;
 }
 
 .event-time {
   color: #ffb3c7;
-  font-size: 14px;
+  font-size: 16px; /* Increased size */
   display: flex;
   align-items: center;
   gap: 6px;
@@ -633,11 +685,11 @@ body, html {
 
 .event-type {
   display: inline-block;
-  padding: 4px 12px;
+  padding: 6px 14px; /* Increased padding */
   border-radius: 8px;
   background: #ffe0e5;
   color: #ff4b7c;
-  font-size: 12px;
+  font-size: 14px; /* Increased size */
   margin-top: 8px;
   font-weight: 500;
 }
@@ -646,47 +698,29 @@ body, html {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  justify-content: center;
 }
 
-.invite-btn {
+.invite-btn, .delete-btn {
   background: #ff4b7c;
   color: white;
   border: none;
-  padding: 8px 16px;
+  padding: 10px 18px; /* Increased padding */
   border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
+  font-size: 16px; /* Increased size */
   font-weight: 500;
   transition: all 0.3s ease;
   white-space: nowrap;
+  width: 100%;
+  justify-content: center;
 }
 
-.invite-btn:hover {
+.invite-btn:hover, .delete-btn:hover {
   background: #ff1c55;
-  transform: translateY(-2px);
-}
-
-.delete-btn {
-  background: #ff1c55;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-}
-
-.delete-btn:hover {
-  background: #ff4b7c;
   transform: translateY(-2px);
 }
 
@@ -706,10 +740,10 @@ body, html {
 
 .modal-content {
   background: white;
-  padding: 32px;
+  padding: 40px; /* Increased padding */
   border-radius: 20px;
   width: 100%;
-  max-width: 500px;
+  max-width: 600px; /* Increased size */
   max-height: 80vh;
   overflow-y: auto;
 }
@@ -724,7 +758,7 @@ body, html {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
+  padding: 14px; /* Increased padding */
   border-radius: 14px;
   background: #ffe0e5;
   margin-bottom: 8px;
@@ -752,15 +786,16 @@ body, html {
   margin-bottom: 8px;
   color: #ff1c55;
   font-weight: 500;
+  font-size: 16px; /* Increased size */
 }
 
 .form-group input,
 .form-group select {
   width: 100%;
-  padding: 12px;
+  padding: 14px; /* Increased padding */
   border: 1px solid #ffccd4;
   border-radius: 14px;
-  font-size: 14px;
+  font-size: 16px; /* Increased size */
   color: #ff1c55;
 }
 
@@ -775,20 +810,22 @@ body, html {
   background: #ffe0e5;
   color: #ff1c55;
   border: none;
-  padding: 12px 24px;
+  padding: 14px 28px; /* Increased padding */
   border-radius: 14px;
   cursor: pointer;
   font-weight: 500;
+  font-size: 16px; /* Increased size */
 }
 
 .submit-btn {
   background: #ff4b7c;
   color: white;
   border: none;
-  padding: 12px 24px;
+  padding: 14px 28px; /* Increased padding */
   border-radius: 14px;
   cursor: pointer;
   font-weight: 500;
+  font-size: 16px; /* Increased size */
 }
 
 /* Responsive Styles */
