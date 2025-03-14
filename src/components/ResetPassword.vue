@@ -40,44 +40,41 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: "ResetPasswordPage",
-  data() {
-    return {
-      newPassword: "",
-      confirmPassword: "",
-      error: "",
-      success: "",
-    };
-  },
-  methods: {
-    handleResetPassword() {
-      if (!this.newPassword || !this.confirmPassword) {
-        this.error = "Please enter both fields.";
-        return;
-      }
-      if (this.newPassword !== this.confirmPassword) {
-        this.error = "Passwords do not match!";
-        return;
-      }
-      
-      // Store the new password in local storage (temporary)
-      const email = sessionStorage.getItem("resetEmail");
-      const correctEmail = "admin@admin.com";
+<script setup>
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 
-      if (email === correctEmail) {
-        localStorage.setItem(`password_${email}`, this.newPassword);
-        sessionStorage.removeItem("resetEmail");
-        this.success = "Password updated! Redirecting to login...";
-        
-        setTimeout(() => {
-          this.$router.push("/");
-        }, 2000);
-      } else {
-        this.error = "Session expired or invalid email. Please request a new reset.";
-      }
-    }
+const newPassword = ref('');
+const confirmPassword = ref('');
+const error = ref('');
+const success = ref('');
+
+const router = useRouter();
+
+const handleResetPassword = () => {
+  if (!newPassword.value || !confirmPassword.value) {
+    error.value = "Please enter both fields.";
+    return;
+  }
+  if (newPassword.value !== confirmPassword.value) {
+    error.value = "Passwords do not match!";
+    return;
+  }
+  
+  // Store the new password in local storage (temporary)
+  const email = sessionStorage.getItem("resetEmail");
+  const validEmails = ["admin@admin.com", "collegehead@admin.com"];
+
+  if (validEmails.includes(email)) {
+    localStorage.setItem(`password_${email}`, newPassword.value);
+    sessionStorage.removeItem("resetEmail");
+    success.value = "Password updated! Redirecting to login...";
+    
+    setTimeout(() => {
+      router.push("/");
+    }, 2000);
+  } else {
+    error.value = "Session expired or invalid email. Please request a new reset.";
   }
 };
 </script>

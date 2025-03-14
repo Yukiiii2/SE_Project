@@ -29,36 +29,33 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: "LoginPage",
-  data() {
-    return {
-      email: "",
-      password: "",
-      error: "",
-      users: [
-        { email: "admin@admin.com", password: "admin123", role: "alumniCoordinator" },
-        { email: "collegehead@admin.com", password: "college123", role: "collegeHead" }
-      ]
-    };
-  },
-  methods: {
-    handleLogin() {
-      const user = this.users.find(u => u.email === this.email && u.password === this.password);
-      if (user) {
-        localStorage.setItem("user", JSON.stringify({ email: user.email, role: user.role }));
-        
-        // Redirect based on role
-        if (user.role === "alumniCoordinator") {
-          this.$router.push("/home");
-        } else if (user.role === "collegeHead") {
-          this.$router.push("/college-home");
-        }
-      } else {
-        this.error = "Invalid email or password!";
-      }
+<script setup>
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+
+const email = ref('');
+const password = ref('');
+const error = ref('');
+const users = [
+  { email: "admin@admin.com", password: "admin123", role: "alumniCoordinator" },
+  { email: "collegehead@admin.com", password: "college123", role: "collegeHead" }
+];
+
+const router = useRouter();
+
+const handleLogin = () => {
+  const user = users.find(u => u.email === email.value && u.password === password.value);
+  if (user) {
+    localStorage.setItem("user", JSON.stringify({ email: user.email, role: user.role }));
+    
+    // Redirect based on role
+    if (user.role === "alumniCoordinator") {
+      router.push("/home");
+    } else if (user.role === "collegeHead") {
+      router.push("/college-home");
     }
+  } else {
+    error.value = "Invalid email or password!";
   }
 };
 </script>

@@ -2,47 +2,43 @@
   <div class="request-page">
     <!-- Sidebar Toggle Button -->
     <button class="menu-btn" @click="toggleSidebar">
-      {{ isSidebarOpen ? "✕" : "☰" }}
+      <i :class="['fas', isSidebarOpen ? 'fa-times' : 'fa-bars']"></i>
     </button>
 
     <!-- Sidebar -->
     <aside :class="{ open: isSidebarOpen }" class="sidebar">
-      <div class="logo">
-        <img src="../assets/logo.png" alt="Logo" />
-        <h2>Alumni Connect</h2>
+      <div class="sidebar-content">
+        <div class="logo">
+          <img src="../assets/logo.png" alt="Logo" />
+          <h2>Alumni Connect</h2>
+        </div>
+        
+        <nav class="nav-links">
+          <router-link to="/home" class="nav-item" active-class="active">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+          </router-link>
+          <router-link to="/contacts" class="nav-item" active-class="active">
+            <i class="fas fa-address-book"></i>
+            <span>Contacts</span>
+          </router-link>
+          <router-link to="/approve-requests" class="nav-item" active-class="active">
+            <i class="fas fa-clipboard-check"></i>
+            <span>Requests</span>
+          </router-link>
+        </nav>
+
+        <button class="logout-btn" @click="handleLogout">
+          <i class="fas fa-sign-out-alt"></i>
+          <span>Logout</span>
+        </button>
       </div>
-      <nav class="nav-links">
-        <router-link to="/home" class="nav-item">
-          <i class="fas fa-home"></i>
-          <span>Home</span>
-        </router-link>
-        <router-link to="/contacts" class="nav-item">
-          <i class="fas fa-cog"></i>
-          <span>Contacts</span>
-        </router-link>
-        <router-link to="/events" class="nav-item">
-          <i class="fas fa-calendar"></i>
-          <span>Events</span>
-        </router-link>
-        <router-link to="/archive" class="nav-item">
-          <i class="fas fa-archive"></i>
-          <span>Archive</span>
-        </router-link>
-        <router-link to="/approve-requests" class="nav-item">
-          <i class="fas fa-envelope"></i>
-          <span>Requests</span>
-        </router-link>
-      </nav>
-      <a href="#" class="logout" @click.prevent="handleLogout">
-        <i class="fas fa-sign-out-alt"></i>
-        <span>Logout</span>
-      </a>
     </aside>
 
     <!-- Main Content -->
     <main class="main-content">
       <!-- Add Request Form -->
-      <section class="add-request">
+      <section class="add-request card">
         <h2>Add Request</h2>
         <form @submit.prevent="submitRequest">
           <div class="form-group">
@@ -68,12 +64,12 @@
               <option value="Others">Others</option>
             </select>
           </div>
-          <button type="submit">Submit Request</button>
+          <button type="submit" class="submit-btn">Submit Request</button>
         </form>
       </section>
 
       <!-- Pending Requests Dashboard -->
-      <section class="pending-requests">
+      <section class="pending-requests card">
         <h2>Pending Requests</h2>
         <table>
           <thead>
@@ -149,123 +145,30 @@ export default {
 </script>
 
 <style scoped>
-.contact-management {
+.request-page {
   display: flex;
   min-height: 100vh;
-  background-color: #FFF5F7;
+  background-color: #f8f9fa;
   font-family: 'Inter', sans-serif;
 }
 
-/* Sidebar Styles */
-.sidebar {
-  width: 180px;
-  height: 100vh;
-  background: linear-gradient(180deg, #FF4B6E 0%, #E63456 100%);
-  color: white;
-  position: fixed;
-  top: 0;
-  left: -250px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 30px rgba(255, 75, 110, 0.15);
-  z-index: 1000;
-  padding: 30px;
-  display: flex;
-  flex-direction: column;
-}
-
-.sidebar.open {
-  left: 0;
-}
-
-/* Sidebar Header */
-.sidebar-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 40px;
-}
-
-/* Move "Alumni Connect" lower to avoid overlap with the button */
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 80px; /* Adjusted to move below the toggle button */
-}
-
-.logo img {
-  width: 45px;
-  height: auto;
-  filter: brightness(0) invert(1);
-}
-
-.logo h2 {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-  color: white;
-}
-
-/* Sidebar Navigation */
-.nav-links {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin: 20px 0;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  padding: 14px;
-  color: rgba(255, 255, 255, 0.8);
-  text-decoration: none;
-  border-radius: 16px;
-  transition: all 0.3s ease;
-  font-weight: 500;
-}
-
-.nav-item.active, .nav-item:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
-  transform: translateX(5px);
-}
-
-/* Logout Button */
-.logout-btn {
-  margin-top: auto;
-  padding: 14px;
-  background-color: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: none;
-  border-radius: 16px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.3s ease;
-}
-
-.logout-btn:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
-}
-
-/* Sidebar Toggle Button */
 .menu-btn {
   position: fixed;
-  top: 20px;
-  left: 20px;
-  z-index: 1001;
+  top: 1.5rem;
+  left: 1.5rem;
+  z-index: 100;
   background: #FF4B6E;
   color: white;
   border: none;
-  padding: 12px;
-  border-radius: 16px;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  width: 48px;
-  height: 48px;
-  font-size: 20px;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(255, 75, 110, 0.2);
+  box-shadow: 0 4px 6px -1px rgba(255, 75, 110, 0.2);
 }
 
 .menu-btn:hover {
@@ -273,109 +176,248 @@ export default {
   transform: translateY(-2px);
 }
 
-/* Main Content */
-.main-content {
-  flex: 1;
-  padding: 40px;
-  transition: all 0.3s ease;
-  margin-left: 0;
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 260px;
+  background: linear-gradient(to bottom, #FF4B6E, #E63456);
+  transform: translateX(-100%);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 50;
+  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.05);
 }
 
-.sidebar.open + .main-content {
-  margin-left: 250px;
+.sidebar.open {
+  transform: translateX(0);
 }
 
-/* Add Request Form */
-.add-request {
-  background: white;
-  padding: 20px;
-  border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(255, 75, 124, 0.1);
-  margin-bottom: 24px;
+.sidebar-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 2rem 1.5rem;
 }
 
-.add-request h2 {
-  color: #ff1c55;
-  font-size: 18px;
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 3rem;
+  margin-bottom: 2.5rem;
+}
+
+.logo img {
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+}
+
+.logo h2 {
+  color: white;
+  font-size: 1.25rem;
   font-weight: 600;
-  margin-bottom: 16px;
+  margin: 0;
+}
+
+.nav-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  border-radius: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+.nav-item i {
+  font-size: 1.25rem;
+  width: 1.5rem;
+}
+
+.nav-item span {
+  font-size: 0.938rem;
+  font-weight: 500;
+}
+
+.nav-item:hover,
+.nav-item.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  transform: translateX(5px);
+}
+
+.logout-btn {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logout-btn i {
+  font-size: 1.25rem;
+}
+
+.logout-btn span {
+  font-size: 0.938rem;
+  font-weight: 500;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.main-content {
+  margin-left: 260px;
+  padding: 2rem;
+  transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  flex: 1;
+}
+
+.card {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  padding: 2rem;
+  margin-bottom: 2rem;
 }
 
 .form-group {
-  margin-bottom: 16px;
+  margin-bottom: 1.5rem;
 }
 
 .form-group label {
   display: block;
-  color: #ff1c55;
-  font-size: 14px;
-  margin-bottom: 8px;
+  color: #4a5568;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
 }
 
-.form-group select,
 .form-group input,
+.form-group select,
 .form-group textarea {
   width: 100%;
-  padding: 8px;
-  border: 1px solid #ffb3c7;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #ff1c55;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  transition: all 0.2s;
 }
 
-button {
-  background: #ff4b7c;
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  outline: none;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 12px;
+  border-radius: 0.5rem;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s;
 }
 
-button:hover {
-  background: #ff1c55;
+.submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(102, 126, 234, 0.2);
 }
 
-/* Pending Requests Dashboard */
-.pending-requests {
-  background: white;
-  padding: 20px;
-  border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(255, 75, 124, 0.1);
-}
-
-.pending-requests h2 {
-  color: #ff1c55;
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 16px;
+.table-container {
+  overflow-x: auto;
+  padding: 1.5rem;
 }
 
 table {
   width: 100%;
-  border-collapse: collapse;
-}
-
-th, td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid #ffb3c7;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 th {
-  background-color: #fff5f7;
-  color: #ff1c55;
+  background-color: #f7fafc;
+  padding: 1rem;
   font-weight: 600;
+  color: #4a5568;
+  text-align: left;
 }
 
 td {
-  color: #6b4e5b;
+  padding: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #4a5568;
 }
 
-tr:hover {
-  background-color: #fff5f7;
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-badge.pending {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.approved {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.rejected {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.action-btn {
+  padding: 0.5rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: #4a5568;
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background-color: #f7fafc;
+  color: #667eea;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+  }
 }
 </style>

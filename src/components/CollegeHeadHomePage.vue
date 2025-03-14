@@ -7,11 +7,11 @@
         <h2>Alumni Connect</h2>
       </div>
       <nav class="nav-links">
-        <router-link to="/home" class="nav-item active">
+        <router-link to="/college-home" class="nav-item active">
           <i class="fas fa-home"></i>
           <span>Home</span>
         </router-link>
-        <router-link to="/contacts" class="nav-item">
+        <router-link to="/college-contacts" class="nav-item">
           <i class="fas fa-cog"></i>
           <span>Contacts</span>
         </router-link>

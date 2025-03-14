@@ -9,7 +9,7 @@
         </div>
       </div>
       <nav class="nav-links">
-        <router-link to="/" class="nav-item" active-class="active">Home</router-link>
+        <router-link to="/home" class="nav-item" active-class="active">Home</router-link>
         <router-link to="/contacts" class="nav-item" active-class="active">Contacts</router-link>
         <router-link to="/events" class="nav-item" active-class="active">Events</router-link>
         <router-link to="/archive" class="nav-item" active-class="active">Archive</router-link>
@@ -65,12 +65,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import Papa from 'papaparse';
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase client
-const supabaseUrl = 'https://htxybqylbdrlciccxarx.supabase.co'; // Correct URL
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0eHlicXlsYmRybGVpY2N4YXJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE2NzExMzYsImV4cCI6MjA1NzI0NzEzNn0.oeW9jIah3KzsSLeQvACdG-TmL9SpiTr3sKgmaVS3hJY'; // Correct Key
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabase } from '../lib/supabaseClient';
 
 const contacts = ref([]);
 const searchTerm = ref('');
@@ -134,14 +129,15 @@ const importCSV = async (event) => {
 
     if (csvData.data.length > 0) {
       const newContacts = csvData.data.map((row) => ({
-        Alumni_ID: row.Alumni_ID || '',
-        Alumni_Firstname: row.Alumni_Firstname || '',
-        Alumni_Lastname: row.Alumni_Lastname || '',
+        alumni_ID: row.Alumni_ID || '',
+        alumni_Name: row.Alumni_Name || '',
+        alumni_firstname: row.Alumni_Firstname || '',
+        Alumni_LastName: row.Alumni_Lastname || '',
         college: row.college || '',
-        Year_Graduated: row.Year_Graduated || null,
+        Year_Graduated: row.Year_Graduated ? parseInt(row.Year_Graduated, 10) : null,
         Program: row.Program || '',
         Email: row.Email || '',
-        Occupation: row.Occupation || '',
+        Occupation_Status: row.Occupation_Status || '',
         Status: row.Status || '',
       }));
 
