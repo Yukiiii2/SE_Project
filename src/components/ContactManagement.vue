@@ -134,19 +134,16 @@ const importCSV = async (event) => {
 
     if (csvData.data.length > 0) {
       const newContacts = csvData.data.map((row) => ({
-  alumni_ID: row.Alumni_ID ? parseInt(row.Alumni_ID, 10) : null,
-  alumni_Name: row.Alumni_Name || '',
-  alumni_firstname: row.Alumni_Firstname || '',
-  Alumni_LastName: row.Alumni_Lastname || '',
-  college: row.college || '',
-  Year_Graduated: row.Year_Graduated ? parseInt(row.Year_Graduated, 10) : null,
-  Program: row.Program || '',
-  Email: row.Email || '',
-  Occupation_Status: row.Occupation_Status || '',
-  Phone_Number: row.Phone_Number ? parseInt(row.Phone_Number, 10) : null,
-  Address: row.Address || '',
-  Status: row.Status || '',
-}));
+        Alumni_ID: row.Alumni_ID || '',
+        Alumni_Firstname: row.Alumni_Firstname || '',
+        Alumni_Lastname: row.Alumni_Lastname || '',
+        college: row.college || '',
+        Year_Graduated: row.Year_Graduated || null,
+        Program: row.Program || '',
+        Email: row.Email || '',
+        Occupation: row.Occupation || '',
+        Status: row.Status || '',
+      }));
 
       console.log('New Contacts:', newContacts);
 
