@@ -150,11 +150,22 @@
           </div>
           <div class="form-group">
             <label>Event Type</label>
-            <select v-model="newEvent.type" required>
-              <option v-for="type in eventTypes" :key="type" :value="type">{{ formatEventType(type) }}</option>
-            </select>
-            <input type="text" v-model="newEventType" placeholder="Add new type" />
-            <button type="button" @click="addEventType">Add Type</button>
+            <div v-if="isAddingNewType">
+              <input
+                type="text"
+                v-model="newEventType"
+                placeholder="Enter new type"
+                class="new-type-input"
+              />
+              <button @click="confirmNewType" class="confirm-btn">Confirm</button>
+              <button @click="cancelNewType" class="cancel-btn">Cancel</button>
+            </div>
+            <div v-else>
+              <select v-model="newEvent.type" @change="checkAddNewType">
+                <option v-for="type in eventTypes" :key="type" :value="type">{{ formatEventType(type) }}</option>
+                <option value="add-new">Add New Type</option>
+              </select>
+            </div>
           </div>
           <div class="form-group">
             <label>Invite Alumni</label>
@@ -196,7 +207,8 @@ export default {
       activeEvents: 2,
       totalAttendees: 45,
       eventTypes: ['major', 'minor', 'research', 'mentorship'],
-      newEventType: '',
+      isAddingNewType: false, // Tracks if the user is adding a new type
+      newEventType: '', // Stores the new type being added
       newEvent: {
         name: '',
         venue: '',
@@ -237,12 +249,27 @@ export default {
       this.events.push(event);
       this.hideCreateEventModal();
     },
-    addEventType() {
-      const type = this.newEventType.trim().toLowerCase();
-      if (type && !this.eventTypes.includes(type)) {
-        this.eventTypes.push(type);
-        this.newEventType = '';
+    checkAddNewType() {
+      if (this.newEvent.type === 'add-new') {
+        this.isAddingNewType = true; // Show the input field for adding a new type
+        this.newEventType = ''; // Reset the input field
       }
+    },
+    confirmNewType() {
+      const formattedType = this.newEventType.trim().toLowerCase();
+      if (formattedType && !this.eventTypes.includes(formattedType)) {
+        this.eventTypes.push(formattedType); // Add the new type to the list
+        this.newEvent.type = formattedType; // Set the new type as the selected value
+        this.isAddingNewType = false; // Hide the input field
+      } else if (this.eventTypes.includes(formattedType)) {
+        alert('This type already exists.');
+      } else {
+        alert('Please enter a valid type.');
+      }
+    },
+    cancelNewType() {
+      this.isAddingNewType = false; // Hide the input field
+      this.newEvent.type = ''; // Reset the selection
     },
     deleteEvent(id) {
       this.events = this.events.filter(e => e.id !== id);
@@ -267,8 +294,6 @@ export default {
   }
 };
 </script>
-
-
 <style scoped>
 * {
   margin: 0;
@@ -690,73 +715,39 @@ body, html {
   background: white;
 }
 
-.add-type-btn {
+/* Buttons for Add New Type */
+.new-type-input {
+  width: calc(100% - 120px);
+  padding: 10px;
+  border: 1px solid #ffccd4;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-right: 8px;
+}
+
+.confirm-btn {
   background: #ff4b7c;
   color: white;
   border: none;
-  padding: 10px 18px;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.3s ease;
-  font-size: 14px;
-  margin-top: 10px;
-}
-
-.add-type-btn:hover {
-  background: #ff1c55;
-  transform: translateY(-2px);
-}
-
-.alumni-list {
-  max-height: 300px;
-  overflow-y: auto;
-  padding-right: 16px;
-  border: 1px solid #ffccd4;
-  border-radius: 14px;
-  background: #ffe0e5;
-}
-
-.alumni-list div {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   padding: 10px 14px;
   border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.alumni-list div:hover {
-  background: #ffccd4;
-}
-
-.alumni-list input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  border: 2px solid #ff4b7c;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 16px;
-  margin-top: 24px;
+.confirm-btn:hover {
+  background: #ff1c55;
 }
 
 .cancel-btn {
   background: #ffe0e5;
   color: #ff1c55;
   border: none;
-  padding: 14px 28px;
-  border-radius: 14px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
   cursor: pointer;
-  font-weight: 500;
-  font-size: 16px;
   transition: all 0.3s ease;
 }
 
@@ -764,19 +755,48 @@ body, html {
   background: #ffccd4;
 }
 
-.submit-btn {
+/* Modal Actions */
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.modal-actions button {
   background: #ff4b7c;
   color: white;
   border: none;
   padding: 14px 28px;
   border-radius: 14px;
-  cursor: pointer;
-  font-weight: 500;
   font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   transition: all 0.3s ease;
 }
 
-.submit-btn:hover {
+.modal-actions button:hover {
+  background: #ff1c55;
+}
+
+.modal-actions .cancel-btn {
+  background: #ffe0e5;
+  color: #ff1c55;
+}
+
+.modal-actions .cancel-btn:hover {
+  background: #ffccd4;
+}
+
+.modal-actions .submit-btn {
+  background: #ff4b7c;
+  color: white;
+}
+
+.modal-actions .submit-btn:hover {
   background: #ff1c55;
 }
 

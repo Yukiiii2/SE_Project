@@ -196,6 +196,7 @@ header {
 header h2 {
   font-size: 2.2rem;
   background: linear-gradient(45deg, #FF4B7C, #FF1C55);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   font-weight: 700;
