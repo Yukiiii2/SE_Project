@@ -36,7 +36,6 @@
 
     <!-- Main Content -->
     <main class="main-content">
-      <!-- Stats Cards Section -->
       <section class="stats-cards">
         <div class="card">
           <div class="card-icon pink">
@@ -76,38 +75,29 @@
         <div class="filter-bar">
           <div class="search-box">
             <i class="fas fa-search"></i>
-            <input 
-              type="text" 
-              placeholder="Search events..." 
-              v-model="searchQuery"
-            />
+            <input type="text" placeholder="Search events..." v-model="searchQuery" />
           </div>
           <select v-model="selectedEventType" class="filter-select">
             <option value="">All Types</option>
-            <option value="major">Major School Events</option>
-            <option value="minor">Minor School Events</option>
-            <option value="research">Research Collaboration</option>
-            <option value="mentorship">Mentorship for Startups</option>
+            <option v-for="type in eventTypes" :key="type" :value="type">{{ formatEventType(type) }}</option>
           </select>
         </div>
 
         <div class="events-grid">
           <div v-for="event in filteredEvents" :key="event.id" class="event-card">
             <div class="event-date">
-              <span class="day">{{ formatDate(event.date).day }}</span>
-              <span class="month">{{ formatDate(event.date).month }}</span>
+              <span class="day">{{ formatDate(event.dateFrom).day }}</span>
+              <span class="month">{{ formatDate(event.dateFrom).month }}</span>
             </div>
             <div class="event-details">
               <h3>{{ event.name }}</h3>
               <span class="event-time">
-                <i class="fas fa-clock"></i> {{ event.time }}
+                <i class="fas fa-clock"></i> {{ event.dateFrom }} to {{ event.dateTo }}
               </span>
               <span class="event-type">{{ formatEventType(event.type) }}</span>
+              <span class="event-venue"><i class="fas fa-map-marker-alt"></i> {{ event.venue }}</span>
             </div>
             <div class="event-actions">
-              <button class="invite-btn" @click="showInviteModal(event)">
-                <i class="fas fa-user-plus"></i> Invite Alumni
-              </button>
               <button class="delete-btn" @click="deleteEvent(event.id)">
                 <i class="fas fa-trash"></i> Delete Event
               </button>
@@ -147,55 +137,37 @@
             <input type="text" v-model="newEvent.name" required />
           </div>
           <div class="form-group">
-            <label>Date</label>
-            <input type="date" v-model="newEvent.date" required />
+            <label>Venue</label>
+            <input type="text" v-model="newEvent.venue" required />
           </div>
           <div class="form-group">
-            <label>Time</label>
-            <input type="time" v-model="newEvent.time" required />
+            <label>Date From</label>
+            <input type="date" v-model="newEvent.dateFrom" required />
+          </div>
+          <div class="form-group">
+            <label>Date To</label>
+            <input type="date" v-model="newEvent.dateTo" required />
           </div>
           <div class="form-group">
             <label>Event Type</label>
             <select v-model="newEvent.type" required>
-              <option value="major">Major School Events</option>
-              <option value="minor">Minor School Events</option>
-              <option value="research">Research Collaboration</option>
-              <option value="mentorship">Mentorship for Startups</option>
+              <option v-for="type in eventTypes" :key="type" :value="type">{{ formatEventType(type) }}</option>
             </select>
+            <input type="text" v-model="newEventType" placeholder="Add new type" />
+            <button type="button" @click="addEventType">Add Type</button>
           </div>
-          <div class="modal-actions">
-            <button type="button" @click="hideCreateEventModal" class="cancel-btn">
-              Cancel
-            </button>
-            <button type="submit" class="submit-btn">Create Event</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Invite Alumni Modal -->
-    <div v-if="isInviteModalVisible" class="modal">
-      <div class="modal-content">
-        <h2>Invite Alumni to {{ selectedEvent?.name }}</h2>
-        <form @submit.prevent="sendInvitations">
           <div class="form-group">
-            <label>Select Alumni</label>
+            <label>Invite Alumni</label>
             <div class="alumni-list">
-              <div v-for="alumnus in alumni" :key="alumnus.id" class="alumnus-checkbox">
-                <input
-                  type="checkbox"
-                  :value="alumnus.id"
-                  v-model="selectedAlumni"
-                />
+              <div v-for="alumnus in alumni" :key="alumnus.id">
+                <input type="checkbox" :value="alumnus.id" v-model="newEvent.invitedAlumni" />
                 <span>{{ alumnus.name }} ({{ alumnus.email }})</span>
               </div>
             </div>
           </div>
           <div class="modal-actions">
-            <button type="button" @click="hideInviteModal" class="cancel-btn">
-              Cancel
-            </button>
-            <button type="submit" class="submit-btn">Send Invitations</button>
+            <button type="button" @click="hideCreateEventModal">Cancel</button>
+            <button type="submit">Create Event</button>
           </div>
         </form>
       </div>
@@ -209,72 +181,44 @@ import 'vue-cal/dist/vuecal.css';
 
 export default {
   name: 'EventManagement',
-  components: {
-    VueCal
-  },
+  components: { VueCal },
   data() {
     return {
-      events: [
-        { 
-          id: 1, 
-          name: 'Annual Alumni Gathering', 
-          date: '2024-04-15', 
-          time: '14:00', 
-          type: 'major', 
-          invitedAlumni: [] 
-        },
-        { 
-          id: 2, 
-          name: 'Startup Mentoring Session', 
-          date: '2024-04-20', 
-          time: '10:00', 
-          type: 'mentorship', 
-          invitedAlumni: [] 
-        },
-        {
-          id: 3,
-          name: 'Research Symposium',
-          date: '2024-04-25',
-          time: '09:00',
-          type: 'research',
-          invitedAlumni: []
-        }
-      ],
+      events: [],
       alumni: [
         { id: 1, name: 'John Doe', email: 'john@example.com' },
         { id: 2, name: 'Jane Smith', email: 'jane@example.com' },
-        { id: 3, name: 'Emily Johnson', email: 'emily@example.com' },
-        { id: 4, name: 'Michael Brown', email: 'michael@example.com' },
-        { id: 5, name: 'Sarah Wilson', email: 'sarah@example.com' }
+        { id: 3, name: 'Emily Johnson', email: 'emily@example.com' }
       ],
-      selectedEvent: null,
-      selectedAlumni: [],
-      isInviteModalVisible: false,
       isCreateModalVisible: false,
       searchQuery: '',
       selectedEventType: '',
       activeEvents: 2,
       totalAttendees: 45,
+      eventTypes: ['major', 'minor', 'research', 'mentorship'],
+      newEventType: '',
       newEvent: {
         name: '',
-        date: '',
-        time: '',
-        type: ''
+        venue: '',
+        dateFrom: '',
+        dateTo: '',
+        type: '',
+        invitedAlumni: []
       }
     };
   },
   computed: {
     filteredEvents() {
-      return this.events.filter((event) => {
-        const matchesSearch = event.name.toLowerCase().includes(this.searchQuery.toLowerCase());
-        const matchesType = !this.selectedEventType || event.type === this.selectedEventType;
-        return matchesSearch && matchesType;
+      return this.events.filter(event => {
+        const matchName = event.name.toLowerCase().includes(this.searchQuery.toLowerCase());
+        const matchType = !this.selectedEventType || event.type === this.selectedEventType;
+        return matchName && matchType;
       });
     },
     calendarEvents() {
       return this.events.map(event => ({
-        start: `${event.date} ${event.time}`,
-        end: `${event.date} ${event.time}`,
+        start: `${event.dateFrom}`,
+        end: `${event.dateTo}`,
         title: event.name,
         content: event.type
       }));
@@ -286,52 +230,28 @@ export default {
     },
     hideCreateEventModal() {
       this.isCreateModalVisible = false;
-      this.newEvent = { name: '', date: '', time: '', type: '' };
+      this.newEvent = { name: '', venue: '', dateFrom: '', dateTo: '', type: '', invitedAlumni: [] };
     },
     createEvent() {
-      const event = { 
-        ...this.newEvent, 
-        id: Date.now(), 
-        invitedAlumni: [] 
-      };
+      const event = { ...this.newEvent, id: Date.now() };
       this.events.push(event);
       this.hideCreateEventModal();
     },
-    showInviteModal(event) {
-      this.selectedEvent = event;
-      this.selectedAlumni = event.invitedAlumni.map(alumni => alumni.id);
-      this.isInviteModalVisible = true;
-    },
-    hideInviteModal() {
-      this.isInviteModalVisible = false;
-      this.selectedEvent = null;
-      this.selectedAlumni = [];
-    },
-    sendInvitations() {
-      if (this.selectedEvent && this.selectedAlumni.length > 0) {
-        const eventIndex = this.events.findIndex(e => e.id === this.selectedEvent.id);
-        if (eventIndex !== -1) {
-          this.events[eventIndex].invitedAlumni = this.selectedAlumni.map(
-            id => this.alumni.find(alumnus => alumnus.id === id)
-          );
-          // Here you would typically make an API call to send invitations
-          this.$notify({
-            type: 'success',
-            title: 'Success',
-            message: 'Invitations sent successfully!'
-          });
-        }
-        this.hideInviteModal();
-      } else {
-        this.$notify({
-          type: 'warning',
-          title: 'Warning',
-          message: 'Please select at least one alumnus to invite.'
-        });
+    addEventType() {
+      const type = this.newEventType.trim().toLowerCase();
+      if (type && !this.eventTypes.includes(type)) {
+        this.eventTypes.push(type);
+        this.newEventType = '';
       }
     },
-    formatDate(dateString) {
-      const date = new Date(dateString);
+    deleteEvent(id) {
+      this.events = this.events.filter(e => e.id !== id);
+    },
+    handleEventClick(event) {
+      alert(`Event: ${event.title}`);
+    },
+    formatDate(dateStr) {
+      const date = new Date(dateStr);
       return {
         day: date.getDate(),
         month: date.toLocaleString('default', { month: 'short' }).toUpperCase()
@@ -340,24 +260,14 @@ export default {
     formatEventType(type) {
       return type.charAt(0).toUpperCase() + type.slice(1);
     },
-    deleteEvent(id) {
-      if (confirm('Are you sure you want to delete this event?')) {
-        this.events = this.events.filter(event => event.id !== id);
-      }
-    },
     handleLogout() {
       localStorage.removeItem('user');
       this.$router.push('/');
-    },
-    navigateToArchive() {
-      this.$router.push('/archive');
-    },
-    handleEventClick(event) {
-      alert(`Event: ${event.title}`);
     }
   }
 };
 </script>
+
 
 <style scoped>
 * {
@@ -410,13 +320,13 @@ body, html {
 }
 
 .logo img {
-  width: 60px; /* Increased size */
+  width: 60px;
   height: auto;
   filter: brightness(0) invert(1);
 }
 
 .logo h2 {
-  font-size: 24px; /* Increased size */
+  font-size: 24px;
   font-weight: 600;
   color: white;
 }
@@ -436,7 +346,7 @@ body, html {
   border-radius: 14px;
   text-decoration: none;
   transition: all 0.3s ease;
-  font-size: 18px; /* Increased size */
+  font-size: 18px;
 }
 
 .nav-item:hover, .nav-item.active {
@@ -455,7 +365,7 @@ body, html {
   border-radius: 14px;
   margin-top: auto;
   transition: all 0.3s ease;
-  font-size: 18px; /* Increased size */
+  font-size: 18px;
 }
 
 .logout:hover {
@@ -466,7 +376,7 @@ body, html {
 .main-content {
   flex: 1;
   margin-left: 280px;
-  padding: 40px; /* Increased padding */
+  padding: 40px;
   overflow-y: auto;
   min-width: 0;
   width: calc(100% - 280px);
@@ -482,21 +392,21 @@ body, html {
 
 .card {
   background: white;
-  padding: 32px; /* Increased padding */
+  padding: 32px;
   border-radius: 20px;
   box-shadow: 0 4px 20px rgba(255, 75, 124, 0.1);
   text-align: center;
 }
 
 .card-icon {
-  width: 70px; /* Increased size */
-  height: 70px; /* Increased size */
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 16px;
-  font-size: 28px; /* Increased size */
+  font-size: 28px;
   color: white;
 }
 
@@ -513,14 +423,14 @@ body, html {
 }
 
 .card h3 {
-  color: black; /* Changed to black */
-  font-size: 18px; /* Increased size */
+  color: black;
+  font-size: 18px;
   margin-bottom: 8px;
 }
 
 .card p {
-  color: black; /* Changed to black */
-  font-size: 28px; /* Increased size */
+  color: black;
+  font-size: 28px;
   font-weight: 700;
   margin-bottom: 0;
 }
@@ -528,7 +438,7 @@ body, html {
 /* Events Section Styles */
 .events-section {
   background: white;
-  padding: 32px; /* Increased padding */
+  padding: 32px;
   border-radius: 20px;
   box-shadow: 0 4px 20px rgba(255, 75, 124, 0.1);
 }
@@ -544,14 +454,14 @@ body, html {
 
 .section-header h2 {
   color: #ff1c55;
-  font-size: 24px; /* Increased size */
+  font-size: 24px;
   font-weight: 600;
   margin: 0;
 }
 
 .section-header p {
   color: #ffb3c7;
-  font-size: 16px; /* Increased size */
+  font-size: 16px;
   margin: 4px 0 0 0;
 }
 
@@ -559,7 +469,7 @@ body, html {
   background: #ff4b7c;
   color: white;
   border: none;
-  padding: 14px 28px; /* Increased padding */
+  padding: 14px 28px;
   border-radius: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -567,7 +477,7 @@ body, html {
   align-items: center;
   gap: 8px;
   transition: all 0.3s ease;
-  font-size: 16px; /* Increased size */
+  font-size: 16px;
 }
 
 .create-button:hover {
@@ -587,7 +497,7 @@ body, html {
   display: flex;
   align-items: center;
   background: #ffe0e5;
-  padding: 14px 18px; /* Increased padding */
+  padding: 14px 18px;
   border-radius: 14px;
   border: 1px solid #ffccd4;
 }
@@ -603,17 +513,17 @@ body, html {
   background: transparent;
   width: 100%;
   color: #ff1c55;
-  font-size: 16px; /* Increased size */
+  font-size: 16px;
 }
 
 .filter-select {
-  padding: 14px 18px; /* Increased padding */
+  padding: 14px 18px;
   border: 1px solid #ffccd4;
   border-radius: 14px;
   color: #ff1c55;
   background: white;
   min-width: 200px;
-  font-size: 16px; /* Increased size */
+  font-size: 16px;
   cursor: pointer;
 }
 
@@ -627,7 +537,7 @@ body, html {
 .event-card {
   background: white;
   border-radius: 20px;
-  padding: 24px; /* Increased padding */
+  padding: 24px;
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 16px;
@@ -645,21 +555,21 @@ body, html {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 14px; /* Increased padding */
+  padding: 14px;
   border-radius: 12px;
   background: #ffe0e5;
-  min-width: 70px; /* Increased size */
+  min-width: 70px;
 }
 
 .event-date .day {
-  font-size: 28px; /* Increased size */
+  font-size: 28px;
   font-weight: 700;
   color: #ff1c55;
   line-height: 1;
 }
 
 .event-date .month {
-  font-size: 14px; /* Increased size */
+  font-size: 14px;
   color: #ffb3c7;
   margin-top: 4px;
 }
@@ -670,14 +580,14 @@ body, html {
 
 .event-details h3 {
   color: #ff1c55;
-  font-size: 18px; /* Increased size */
+  font-size: 18px;
   font-weight: 600;
   margin: 0 0 8px 0;
 }
 
 .event-time {
   color: #ffb3c7;
-  font-size: 16px; /* Increased size */
+  font-size: 16px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -685,11 +595,11 @@ body, html {
 
 .event-type {
   display: inline-block;
-  padding: 6px 14px; /* Increased padding */
+  padding: 6px 14px;
   border-radius: 8px;
   background: #ffe0e5;
   color: #ff4b7c;
-  font-size: 14px; /* Increased size */
+  font-size: 14px;
   margin-top: 8px;
   font-weight: 500;
 }
@@ -705,13 +615,13 @@ body, html {
   background: #ff4b7c;
   color: white;
   border: none;
-  padding: 10px 18px; /* Increased padding */
+  padding: 10px 18px;
   border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 16px; /* Increased size */
+  font-size: 16px;
   font-weight: 500;
   transition: all 0.3s ease;
   white-space: nowrap;
@@ -740,41 +650,13 @@ body, html {
 
 .modal-content {
   background: white;
-  padding: 40px; /* Increased padding */
+  padding: 40px;
   border-radius: 20px;
   width: 100%;
-  max-width: 600px; /* Increased size */
+  max-width: 600px;
   max-height: 80vh;
   overflow-y: auto;
-}
-
-.alumni-list {
-  max-height: 300px;
-  overflow-y: auto;
-  padding-right: 16px;
-}
-
-.alumnus-checkbox {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px; /* Increased padding */
-  border-radius: 14px;
-  background: #ffe0e5;
-  margin-bottom: 8px;
-  transition: all 0.3s ease;
-}
-
-.alumnus-checkbox:hover {
-  background: #ffccd4;
-}
-
-.alumnus-checkbox input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  border: 2px solid #ff4b7c;
-  border-radius: 4px;
-  cursor: pointer;
+  box-shadow: 0 8px 25px rgba(255, 75, 124, 0.15);
 }
 
 .form-group {
@@ -785,18 +667,78 @@ body, html {
   display: block;
   margin-bottom: 8px;
   color: #ff1c55;
-  font-weight: 500;
-  font-size: 16px; /* Increased size */
+  font-weight: 600;
+  font-size: 16px;
 }
 
 .form-group input,
 .form-group select {
   width: 100%;
-  padding: 14px; /* Increased padding */
+  padding: 14px;
   border: 1px solid #ffccd4;
   border-radius: 14px;
-  font-size: 16px; /* Increased size */
+  font-size: 16px;
   color: #ff1c55;
+  background: #ffe0e5;
+  transition: all 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #ff4b7c;
+  background: white;
+}
+
+.add-type-btn {
+  background: #ff4b7c;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+.add-type-btn:hover {
+  background: #ff1c55;
+  transform: translateY(-2px);
+}
+
+.alumni-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 16px;
+  border: 1px solid #ffccd4;
+  border-radius: 14px;
+  background: #ffe0e5;
+}
+
+.alumni-list div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.alumni-list div:hover {
+  background: #ffccd4;
+}
+
+.alumni-list input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #ff4b7c;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .modal-actions {
@@ -810,22 +752,32 @@ body, html {
   background: #ffe0e5;
   color: #ff1c55;
   border: none;
-  padding: 14px 28px; /* Increased padding */
+  padding: 14px 28px;
   border-radius: 14px;
   cursor: pointer;
   font-weight: 500;
-  font-size: 16px; /* Increased size */
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.cancel-btn:hover {
+  background: #ffccd4;
 }
 
 .submit-btn {
   background: #ff4b7c;
   color: white;
   border: none;
-  padding: 14px 28px; /* Increased padding */
+  padding: 14px 28px;
   border-radius: 14px;
   cursor: pointer;
   font-weight: 500;
-  font-size: 16px; /* Increased size */
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.submit-btn:hover {
+  background: #ff1c55;
 }
 
 /* Responsive Styles */

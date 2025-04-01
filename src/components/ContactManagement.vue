@@ -9,7 +9,7 @@
         </div>
       </div>
       <nav class="nav-links">
-        <router-link to="/" class="nav-item" active-class="active">Home</router-link>
+        <router-link to="/home" class="nav-item" active-class="active">Home</router-link>
         <router-link to="/contacts" class="nav-item" active-class="active">Contacts</router-link>
         <router-link to="/events" class="nav-item" active-class="active">Events</router-link>
         <router-link to="/archive" class="nav-item" active-class="active">Archive</router-link>
@@ -29,29 +29,34 @@
       <input type="text" class="search-bar" v-model="searchTerm" placeholder="Search contacts..." />
       <table>
         <thead>
-          <tr>
-            <th><input type="checkbox" @change="toggleSelectAll" /></th>
-            <th>Alumni ID</th>
-            <th>Name</th>
-            <th>College</th>
-            <th>Program</th>
-            <th>Email</th>
-            <th>Occupation</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="contact in paginatedContacts" :key="contact.id">
-            <td><input type="checkbox" :value="contact.id" v-model="selectedContacts" /></td>
-            <td>{{ contact.Alumni_ID }}</td>
-            <td>{{ contact.Alumni_Firstname }} {{ contact.Alumni_Lastname }}</td>
-            <td>{{ contact.college }}</td>
-            <td>{{ contact.Program }}</td>
-            <td>{{ contact.Email }}</td>
-            <td>{{ contact.Occupation }}</td>
-            <td>{{ contact.Status }}</td>
-          </tr>
-        </tbody>
+  <tr>
+    <th><input type="checkbox" @change="toggleSelectAll" /></th>
+    <th>Alumni ID</th>
+    <th>Name</th>
+    <th>College</th>
+    <th>Program</th>
+    <th>Email</th>
+    <th>Occupation</th>
+    <th>Status</th>
+  </tr>
+</thead>
+<tbody>
+  <tr v-for="contact in paginatedContacts" :key="contact.id">
+    <td><input type="checkbox" v-model="selectedContacts" :value="contact.id" @click.stop /></td>
+    <td>{{ contact.alumni_ID }}</td>
+    <td>{{ contact.alumni_Name }}</td>
+    <td>{{ contact.college }}</td>
+    <td>{{ contact.Program }}</td>
+    <td>{{ contact.Email }}</td>
+    <td>{{ contact.Occupation_Status }}</td>
+    <td>
+      <span :class="'status-badge ' + (contact.Status || '').toLowerCase()">
+        {{ contact.Status }}
+      </span>
+    </td>
+  </tr>
+</tbody>
+
       </table>
       <div class="pagination">
         <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1">Previous</button>
@@ -65,12 +70,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import Papa from 'papaparse';
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase client
-const supabaseUrl = 'https://htxybqylbdrlciccxarx.supabase.co'; // Correct URL
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0eHlicXlsYmRybGVpY2N4YXJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE2NzExMzYsImV4cCI6MjA1NzI0NzEzNn0.oeW9jIah3KzsSLeQvACdG-TmL9SpiTr3sKgmaVS3hJY'; // Correct Key
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabase } from '../lib/supabaseClient';
 
 const contacts = ref([]);
 const searchTerm = ref('');
@@ -134,16 +134,19 @@ const importCSV = async (event) => {
 
     if (csvData.data.length > 0) {
       const newContacts = csvData.data.map((row) => ({
-        Alumni_ID: row.Alumni_ID || '',
-        Alumni_Firstname: row.Alumni_Firstname || '',
-        Alumni_Lastname: row.Alumni_Lastname || '',
-        college: row.college || '',
-        Year_Graduated: row.Year_Graduated || null,
-        Program: row.Program || '',
-        Email: row.Email || '',
-        Occupation: row.Occupation || '',
-        Status: row.Status || '',
-      }));
+  alumni_ID: row.Alumni_ID ? parseInt(row.Alumni_ID, 10) : null,
+  alumni_Name: row.Alumni_Name || '',
+  alumni_firstname: row.Alumni_Firstname || '',
+  Alumni_LastName: row.Alumni_Lastname || '',
+  college: row.college || '',
+  Year_Graduated: row.Year_Graduated ? parseInt(row.Year_Graduated, 10) : null,
+  Program: row.Program || '',
+  Email: row.Email || '',
+  Occupation_Status: row.Occupation_Status || '',
+  Phone_Number: row.Phone_Number ? parseInt(row.Phone_Number, 10) : null,
+  Address: row.Address || '',
+  Status: row.Status || '',
+}));
 
       console.log('New Contacts:', newContacts);
 
