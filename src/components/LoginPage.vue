@@ -20,6 +20,13 @@
           </div>
           <button type="submit" class="login-button">Sign In</button>
           <p v-if="error" class="error-message">{{ error }}</p>
+
+          <div class="register-section">
+            <button type="button" class="register-button" @click="router.push('/register')">
+              Create an Account
+            </button>
+          </div>
+
           <div class="forgot-password">
             <router-link to="/forgot-password" class="forgot-password-link">Forgot Password?</router-link>
           </div>
@@ -30,34 +37,37 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { supabase } from '../lib/supabaseClient'
 
-const email = ref('');
-const password = ref('');
-const error = ref('');
-const users = [
-  { email: "admin@admin.com", password: "admin123", role: "alumniCoordinator" },
-  { email: "collegehead@admin.com", password: "college123", role: "collegeHead" }
-];
+const email = ref('')
+const password = ref('')
+const error = ref('')
+const router = useRouter()
 
-const router = useRouter();
+const handleLogin = async () => {
+  error.value = ''
 
-const handleLogin = () => {
-  const user = users.find(u => u.email === email.value && u.password === password.value);
-  if (user) {
-    localStorage.setItem("user", JSON.stringify({ email: user.email, role: user.role }));
-    
-    // Redirect based on role
-    if (user.role === "alumniCoordinator") {
-      router.push("/home");
-    } else if (user.role === "collegeHead") {
-      router.push("/college-home");
-    }
-  } else {
-    error.value = "Invalid email or password!";
+  const { data, error: loginError } = await supabase.auth.signInWithPassword({
+    email: email.value,
+    password: password.value
+  })
+
+  if (loginError) {
+    error.value = loginError.message
+    return
   }
-};
+
+  // If email is not confirmed
+  if (!data.user?.confirmed_at) {
+    error.value = "Please verify your email before logging in."
+    return
+  }
+
+  // Redirect on success
+  router.push('/home')
+}
 </script>
 
 <style scoped>
@@ -146,22 +156,6 @@ const handleLogin = () => {
   box-shadow: 0 0 0 4px rgba(255, 75, 124, 0.2);
 }
 
-.forgot-password {
-  text-align: center;
-  margin-top: clamp(16px, 3vw, 20px);
-}
-
-.forgot-password a {
-  color: #FF4B7C;
-  text-decoration: none;
-  font-size: clamp(14px, 2.5vw, 16px);
-  transition: color 0.3s ease;
-}
-
-.forgot-password a:hover {
-  color: #FF1C55;
-}
-
 .login-button {
   width: 100%;
   padding: clamp(12px, 2.5vw, 14px);
@@ -184,58 +178,40 @@ const handleLogin = () => {
   transform: translateY(0) scale(0.98);
 }
 
-/* Large Screens */
-@media (min-width: 1200px) {
-  .login-container {
-    max-width: 450px;
-  }
+.register-section {
+  text-align: center;
+  margin-top: 16px;
 }
 
-/* Medium Screens */
-@media (max-width: 768px) {
-  .login-container {
-    width: 95%;
-  }
+.register-button {
+  background: transparent;
+  border: 2px solid #FF4B7C;
+  color: #FF4B7C;
+  padding: 10px 16px;
+  font-size: 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-/* Small Screens */
-@media (max-width: 480px) {
-  .login-form {
-    padding: 20px;
-  }
-  
-  .login-container {
-    width: 100%;
-    margin: 15px;
-  }
-
-  .input-field {
-    font-size: 16px; /* Prevents zoom on mobile */
-  }
+.register-button:hover {
+  background-color: #FF4B7C;
+  color: white;
 }
 
-/* Handle viewport height on mobile */
-@media (max-height: 600px) {
-  .login-page {
-    min-height: 100vh;
-    padding: 20px 0;
-  }
-
-  .login-form {
-    padding: 15px;
-  }
-
-  .logo {
-    width: 60px;
-  }
+.forgot-password {
+  text-align: center;
+  margin-top: clamp(16px, 3vw, 20px);
 }
 
-/* Prevent overflow issues */
-@media screen and (orientation: landscape) and (max-height: 500px) {
-  .login-page {
-    min-height: 100vh;
-    height: auto;
-    padding: 20px 0;
-  }
+.forgot-password a {
+  color: #FF4B7C;
+  text-decoration: none;
+  font-size: clamp(14px, 2.5vw, 16px);
+  transition: color 0.3s ease;
+}
+
+.forgot-password a:hover {
+  color: #FF1C55;
 }
 </style>
