@@ -1,5 +1,5 @@
 <template>
-  <div v-if="contact" class="contact-detail">
+  <div v-if="editableContact" class="contact-detail">
     <header>
       <button @click="$router.push('/contacts')" class="back-btn">← Back</button>
       <h2>{{ editableContact.firstName }} {{ editableContact.lastName }}</h2>
@@ -41,7 +41,6 @@
           <option>Contacted</option>
         </select>
 
-        <!-- Edit & Save Buttons -->
         <div class="buttons">
           <button v-if="isEditing" @click="saveChanges">Apply</button>
           <button v-if="isEditing" @click="cancelChanges">Cancel</button>
@@ -83,96 +82,193 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: ["id"],
-  data() {
-    return {
-      contact: null,
-      editableContact: {
-        firstName: "",
-        lastName: "",
-        college: "",
-        program: "",
-        contactNumber: "",
-        email: "",
-        dateGraduated: "",
-        occupation: "",
-        company: "",
-        status: "Pending",
-        messages: [],
-        notes: []
-      },
-      newMessage: "",
-      newNote: "",
-      isEditing: false
+<script setup>
+import { ref, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { supabase } from '../lib/supabaseClient';
+
+const route = useRoute();
+const router = useRouter();
+const contactId = route.params.id;
+
+const contact = ref(null);
+const editableContact = ref({
+  firstName: '',
+  lastName: '',
+  college: '',
+  program: '',
+  contactNumber: '',
+  email: '',
+  dateGraduated: '',
+  occupation: '',
+  company: '',
+  status: 'Pending',
+  notes: [],
+  messages: []
+});
+
+const newMessage = ref('');
+const newNote = ref('');
+const isEditing = ref(false);
+
+const fetchContact = async () => {
+  if (contactId === 'new') {
+    contact.value = {}; // Start with an empty object for new
+    editableContact.value = {
+      firstName: '',
+      lastName: '',
+      college: '',
+      program: '',
+      contactNumber: '',
+      email: '',
+      dateGraduated: '',
+      occupation: '',
+      company: '',
+      status: 'Pending',
+      notes: [],
+      messages: []
     };
-  },
-  methods: {
-    fetchContact() {
-      const allContacts = JSON.parse(localStorage.getItem("contacts")) || [];
-      this.contact = allContacts.find((c) => c.id == this.id);
+  } else {
+    const { data, error } = await supabase
+      .from('alumni_table')
+      .select('*')
+      .eq('alumni_ID', contactId)
+      .single();
 
-      if (this.contact) {
-        this.editableContact = {
-          ...this.contact,
-          firstName: this.contact.name.split(" ")[0] || "",
-          lastName: this.contact.name.split(" ")[1] || "",
-          notes: this.contact.notes || [],
-          messages: this.contact.messages || []
-        };
-      } else {
-        this.$router.push("/contacts");
-      }
-    },
-    saveChanges() {
-      const allContacts = JSON.parse(localStorage.getItem("contacts")) || [];
-      const index = allContacts.findIndex((c) => c.id == this.id);
-      
-      allContacts[index] = {
-        ...this.editableContact,
-        name: `${this.editableContact.firstName} ${this.editableContact.lastName}`
+    if (error || !data) {
+      console.error('Failed to fetch contact:', error);
+      router.push('/contacts');
+    } else {
+      contact.value = data;
+      editableContact.value = {
+        firstName: data.alumni_firstname || '',
+        lastName: data.Alumni_LastName || '',
+        college: data.college || '',
+        program: data.Program || '',
+        contactNumber: data.Phone_Number || '',
+        email: data.Email || '',
+        dateGraduated: data.Year_Graduated || '',
+        occupation: data.Occupation_Status || '',
+        company: data.company || '',
+        status: data.Status || 'Pending',
       };
-
-      localStorage.setItem("contacts", JSON.stringify(allContacts));
-      this.contact = { ...this.editableContact };
-      this.isEditing = false;
-    },
-    cancelChanges() {
-      this.editableContact = { ...this.contact };
-      this.isEditing = false;
-    },
-    enableEditing() {
-      this.isEditing = true;
-    },
-    sendMessage() {
-      if (this.newMessage.trim() !== "") {
-        this.editableContact.messages.push({ text: this.newMessage, time: new Date().toLocaleTimeString() });
-        this.newMessage = "";
-        this.saveChanges();
-      }
-    },
-    addNote() {
-      if (this.newNote.trim() !== "") {
-        this.editableContact.notes.push(this.newNote);
-        this.newNote = "";
-        this.saveChanges();
-      }
-    },
-    deleteNote(index) {
-      this.editableContact.notes.splice(index, 1);
-      this.saveChanges();
-    },
-    editNote(index) {
-      this.newNote = this.editableContact.notes[index];
-      this.deleteNote(index);
     }
-  },
-  created() {
-    this.fetchContact();
   }
 };
+
+const saveChanges = async () => {
+  const contactData = { ...editableContact.value };
+
+  let nextId = contactId;
+  if (contactId === 'new') {
+    const { data: existingContacts, error: fetchError } = await supabase
+      .from('alumni_table')
+      .select('alumni_ID')
+      .order('alumni_ID', { ascending: false })
+      .limit(1);
+
+    if (fetchError) {
+      console.error('Failed to fetch IDs:', fetchError.message);
+      alert('Unable to create contact');
+      return;
+    }
+
+    nextId = existingContacts?.[0]?.alumni_ID
+      ? parseInt(existingContacts[0].alumni_ID) + 1
+      : 111;
+  }
+
+  const payload = {
+    alumni_ID: nextId,
+    alumni_Name: `${contactData.firstName} ${contactData.lastName}`,
+    Alumni_LastName: contactData.lastName,
+    alumni_firstname: contactData.firstName,
+    Year_Graduated: contactData.dateGraduated,
+    Program: contactData.program,
+    Phone_Number: contactData.contactNumber,
+    Email: contactData.email,
+    Address: contactData.address || '',
+    Occupation_Status: contactData.occupation,
+    Status: contactData.status,
+    college: contactData.college,
+    company: contactData.company,
+  };
+
+  let response;
+  if (contactId === 'new') {
+    response = await supabase.from('alumni_table').insert(payload);
+  } else {
+    response = await supabase
+      .from('alumni_table')
+      .update(payload)
+      .eq('alumni_ID', contactId);
+  }
+
+  if (response.error) {
+    console.error('Error saving contact:', response.error.message);
+    alert('Failed to save contact.');
+  } else {
+    alert('Contact saved successfully!');
+    isEditing.value = false;
+    router.push('/contacts');
+  }
+};
+
+const cancelChanges = () => {
+  if (contact.value) {
+    editableContact.value = {
+      firstName: contact.value.alumni_firstname || '',
+      lastName: contact.value.Alumni_LastName || '',
+      college: contact.value.college || '',
+      program: contact.value.Program || '',
+      contactNumber: contact.value.Phone_Number || '',
+      email: contact.value.Email || '',
+      dateGraduated: contact.value.Year_Graduated || '',
+      occupation: contact.value.Occupation_Status || '',
+      company: contact.value.company || '',
+      status: contact.value.Status || 'Pending',
+      notes: contact.value.notes || [],
+      messages: contact.value.messages || []
+    };
+  }
+  isEditing.value = false;
+};
+
+const enableEditing = () => {
+  isEditing.value = true;
+};
+
+const sendMessage = () => {
+  if (newMessage.value.trim()) {
+    editableContact.value.messages.push({
+      text: newMessage.value,
+      time: new Date().toLocaleTimeString()
+    });
+    newMessage.value = '';
+  }
+};
+
+const addNote = () => {
+  if (newNote.value.trim()) {
+    editableContact.value.notes.push(newNote.value);
+    newNote.value = '';
+  }
+};
+
+const deleteNote = (index) => {
+  editableContact.value.notes.splice(index, 1);
+};
+
+const editNote = (index) => {
+  newNote.value = editableContact.value.notes[index];
+  deleteNote(index);
+};
+
+onMounted(() => {
+  fetchContact();
+});
 </script>
+
 
 <style scoped>
 .contact-detail {

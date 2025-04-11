@@ -4,7 +4,7 @@
     <div :class="['sidebar', { open: isSidebarOpen }]">
       <div class="sidebar-header">
         <div class="logo">
-          <img src="@/assets/logo.png" alt="Logo" /> <!-- Correct logo path -->
+          <img src="@/assets/logo.png" alt="Logo" />
           <h2>Alumni Connect</h2>
         </div>
       </div>
@@ -17,6 +17,7 @@
       </nav>
       <button class="logout-btn" @click="handleLogout">Logout</button>
     </div>
+
     <div class="main-content">
       <h1>Manage Contacts</h1>
       <div class="actions">
@@ -26,38 +27,52 @@
         <button @click="exportCSV">Export</button>
         <input type="file" ref="fileInput" @change="importCSV" style="display: none;" />
       </div>
+
       <input type="text" class="search-bar" v-model="searchTerm" placeholder="Search contacts..." />
+
       <table>
         <thead>
-  <tr>
-    <th><input type="checkbox" @change="toggleSelectAll" /></th>
-    <th>Alumni ID</th>
-    <th>Name</th>
-    <th>College</th>
-    <th>Program</th>
-    <th>Email</th>
-    <th>Occupation</th>
-    <th>Status</th>
-  </tr>
-</thead>
-<tbody>
-  <tr v-for="contact in paginatedContacts" :key="contact.id">
-    <td><input type="checkbox" v-model="selectedContacts" :value="contact.id" @click.stop /></td>
-    <td>{{ contact.alumni_ID }}</td>
-    <td>{{ contact.alumni_Name }}</td>
-    <td>{{ contact.college }}</td>
-    <td>{{ contact.Program }}</td>
-    <td>{{ contact.Email }}</td>
-    <td>{{ contact.Occupation_Status }}</td>
-    <td>
-      <span :class="'status-badge ' + (contact.Status || '').toLowerCase()">
-        {{ contact.Status }}
-      </span>
-    </td>
-  </tr>
-</tbody>
-
+          <tr>
+            <th><input type="checkbox" @change="toggleSelectAll" /></th>
+            <th>Alumni ID</th>
+            <th>Name</th>
+            <th>College</th>
+            <th>Program</th>
+            <th>Email</th>
+            <th>Occupation</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="contact in paginatedContacts"
+            :key="contact.alumni_ID"
+            @click="navigateToContact(contact.alumni_ID)"
+            style="cursor: pointer;"
+          >
+            <td @click.stop>
+              <input
+                type="checkbox"
+                :value="contact.alumni_ID"
+                :checked="selectedContacts.includes(contact.alumni_ID)"
+                @change="toggleSingleSelect(contact.alumni_ID)"
+              />
+            </td>
+            <td>{{ contact.alumni_ID }}</td>
+            <td>{{ contact.alumni_Name }}</td>
+            <td>{{ contact.college }}</td>
+            <td>{{ contact.Program }}</td>
+            <td>{{ contact.Email }}</td>
+            <td>{{ contact.Occupation_Status }}</td>
+            <td>
+              <span :class="'status-badge ' + (contact.Status || '').toLowerCase()">
+                {{ contact.Status }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
       </table>
+
       <div class="pagination">
         <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1">Previous</button>
         <span>Page {{ currentPage }} of {{ totalPages }}</span>
@@ -69,32 +84,26 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import Papa from 'papaparse';
 import { supabase } from '../lib/supabaseClient';
 
+const router = useRouter();
 const contacts = ref([]);
 const searchTerm = ref('');
 const selectedContacts = ref([]);
 const currentPage = ref(1);
 const pageSize = ref(10);
 const isSidebarOpen = ref(false);
-const filterKey = ref('all'); // Default filter key
-const filterValue = ref(''); // Filter value
-const fileInput = ref(null); // Reference for file input
+const fileInput = ref(null);
 
 const filteredContacts = computed(() => {
   const search = searchTerm.value.toLowerCase();
-  return contacts.value.filter(contact => {
-    const matchesSearch = Object.values(contact).some(val =>
+  return contacts.value.filter(contact =>
+    Object.values(contact).some(val =>
       typeof val === 'string' && val.toLowerCase().includes(search)
-    );
-    const matchesFilter = filterKey.value === 'all' || !filterValue.value
-      ? Object.values(contact).some(val =>
-          typeof val === 'string' && val.toLowerCase().includes(filterValue.value.toLowerCase())
-        )
-      : contact[filterKey.value] && contact[filterKey.value].toLowerCase().includes(filterValue.value.toLowerCase());
-    return matchesSearch && matchesFilter;
-  });
+    )
+  );
 });
 
 const totalPages = computed(() => Math.ceil(filteredContacts.value.length / pageSize.value));
@@ -110,16 +119,18 @@ const toggleSidebar = () => {
 
 const handleLogout = () => {
   localStorage.removeItem('user');
-  this.$router.push('/');
+  router.push('/');
 };
 
 const handleNewContact = () => {
-  // Add logic to create a new contact
+  router.push({ name: 'ContactDetail', params: { id: 'new' } });
 };
 
-const triggerFileInput = () => {
-  fileInput.value.click();
+const navigateToContact = (id) => {
+  router.push({ name: 'ContactDetail', params: { id } });
 };
+
+const triggerFileInput = () => fileInput.value.click();
 
 const importCSV = async (event) => {
   const file = event.target.files[0];
@@ -132,54 +143,25 @@ const importCSV = async (event) => {
       skipEmptyLines: true,
     });
 
-    if (csvData.data.length > 0) {
-      const newContacts = csvData.data.map((row) => ({
-        Alumni_ID: row.Alumni_ID || '',
-        Alumni_Firstname: row.Alumni_Firstname || '',
-        Alumni_Lastname: row.Alumni_Lastname || '',
-        college: row.college || '',
-        Year_Graduated: row.Year_Graduated || null,
-        Program: row.Program || '',
-        Email: row.Email || '',
-        Occupation: row.Occupation || '',
-        Status: row.Status || '',
-      }));
+    const newContacts = csvData.data.map(row => ({
+      Alumni_ID: row.Alumni_ID || '',
+      Alumni_Firstname: row.Alumni_Firstname || '',
+      Alumni_Lastname: row.Alumni_Lastname || '',
+      college: row.college || '',
+      Year_Graduated: row.Year_Graduated || null,
+      Program: row.Program || '',
+      Email: row.Email || '',
+      Occupation: row.Occupation || '',
+      Status: row.Status || '',
+    }));
 
-      console.log('New Contacts:', newContacts);
-
-      // Insert new contacts into Supabase
-      const { data, error } = await supabase
-        .from('alumni_table')
-        .insert(newContacts);
-
-      if (error) {
-        console.error('Error inserting contacts:', error.message);
-      } else {
-        console.log('Inserted Contacts:', data);
-
-        // Fetch updated contacts from Supabase
-        const { data: updatedContacts, error: fetchError } = await supabase
-          .from('alumni_table')
-          .select('*');
-
-        if (fetchError) {
-          console.error('Error fetching contacts:', fetchError.message);
-        } else {
-          console.log('Updated Contacts:', updatedContacts);
-          contacts.value = updatedContacts;
-        }
-      }
-    }
+    const { error } = await supabase.from('alumni_table').insert(newContacts);
+    if (!error) fetchContacts();
   };
   reader.readAsText(file);
 };
 
 const exportCSV = () => {
-  if (contacts.value.length === 0) {
-    alert('No contacts to export!');
-    return;
-  }
-
   const csvContent = Papa.unparse(contacts.value);
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
@@ -188,58 +170,48 @@ const exportCSV = () => {
   link.click();
 };
 
-const goToPage = (page) => {
-  if (page >= 1 && page <= totalPages.value) {
-    currentPage.value = page;
-  }
+const toggleSelectAll = (event) => {
+  selectedContacts.value = event.target.checked
+    ? paginatedContacts.value.map(c => c.alumni_ID)
+    : [];
 };
 
-const toggleSelectAll = (event) => {
-  selectedContacts.value = event.target.checked ? paginatedContacts.value.map(c => c.id) : [];
+const toggleSingleSelect = (id) => {
+  if (selectedContacts.value.includes(id)) {
+    selectedContacts.value = selectedContacts.value.filter(cid => cid !== id);
+  } else {
+    selectedContacts.value.push(id);
+  }
 };
 
 const deleteContacts = async () => {
   if (!selectedContacts.value.length) return;
 
-  const archivedContacts = JSON.parse(localStorage.getItem('archivedContacts') || '[]');
-  const toArchive = contacts.value.filter(c => selectedContacts.value.includes(c.id));
-
-  // Move to archive
-  const updatedArchivedContacts = [...archivedContacts, ...toArchive];
-  localStorage.setItem('archivedContacts', JSON.stringify(updatedArchivedContacts));
-
-  // Remove from active contacts
   const { error } = await supabase
     .from('alumni_table')
     .delete()
-    .in('id', selectedContacts.value);
+    .in('alumni_ID', selectedContacts.value.map(Number));
 
-  if (error) {
-    console.error('Error deleting contacts:', error.message);
-  } else {
-    contacts.value = contacts.value.filter(c => !selectedContacts.value.includes(c.id));
+  if (!error) {
+    await fetchContacts();
     selectedContacts.value = [];
-  }
-};
-
-// eslint-disable-next-line no-unused-vars
-const navigateToArchive = () => {
-  this.$router.push('/archive');
-};
-
-onMounted(async () => {
-  const { data: fetchedContacts, error } = await supabase
-    .from('alumni_table')
-    .select('*');
-
-  if (error) {
-    console.error('Error fetching contacts:', error.message);
   } else {
-    console.log('Fetched Contacts:', fetchedContacts);
-    contacts.value = fetchedContacts;
+    console.error('Delete failed:', error.message);
   }
-});
+};
+
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) currentPage.value = page;
+};
+
+const fetchContacts = async () => {
+  const { data, error } = await supabase.from('alumni_table').select('*');
+  if (!error) contacts.value = data;
+};
+
+onMounted(fetchContacts);
 </script>
+
 
 <style scoped>
 .contact-management {
