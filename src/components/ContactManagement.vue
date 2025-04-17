@@ -12,8 +12,7 @@
         <router-link to="/home" class="nav-item" active-class="active">Home</router-link>
         <router-link to="/contacts" class="nav-item" active-class="active">Contacts</router-link>
         <router-link to="/events" class="nav-item" active-class="active">Events</router-link>
-        <router-link to="/archive" class="nav-item" active-class="active">Archive</router-link>
-        <router-link to="/requests" class="nav-item" active-class="active">Requests</router-link>
+        <router-link to="/approve-requests" class="nav-item" active-class="active">Requests</router-link>
       </nav>
       <button class="logout-btn" @click="handleLogout">Logout</button>
     </div>

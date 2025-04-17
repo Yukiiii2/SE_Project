@@ -10,7 +10,6 @@
         <router-link to="/home" class="nav-item active"><i class="fas fa-home"></i><span>Home</span></router-link>
         <router-link to="/contacts" class="nav-item"><i class="fas fa-cog"></i><span>Contacts</span></router-link>
         <router-link to="/events" class="nav-item"><i class="fas fa-calendar"></i><span>Events</span></router-link>
-        <router-link to="/archive" class="nav-item"><i class="fas fa-archive"></i><span>Archive</span></router-link>
         <router-link to="/approve-requests" class="nav-item"><i class="fas fa-envelope"></i><span>Requests</span></router-link>
       </nav>
       <a href="#" class="logout" @click.prevent="handleLogout"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>

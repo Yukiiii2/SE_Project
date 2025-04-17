@@ -28,42 +28,42 @@
           </div>
         </form>
         <p v-if="error" class="error-message">{{ error }}</p>
+        <p v-if="success" class="success-message">{{ success }}</p>
       </div>
     </div>
   </div>
 </template>
 
-<script>
-export default {
-  name: "ForgotPasswordPage",
-  data() {
-    return {
-      email: "",
-      error: "",
-    };
-  },
-  methods: {
-    handleForgotPassword() {
-      const correctEmail = "admin@admin.com";
+<script setup>
+import { ref } from 'vue'
+import { supabase } from '../lib/supabaseClient'
 
-      if (!this.email) {
-        this.error = "Please enter an email.";
-        return;
-      }
+const email = ref('')
+const error = ref('')
+const success = ref('')
 
-      if (this.email !== correctEmail) {
-        this.error = "Email not found.";
-        return;
-      }
+const handleForgotPassword = async () => {
+  error.value = ''
+  success.value = ''
 
-      // Store the email in session storage (temporary memory)
-      sessionStorage.setItem("resetEmail", this.email);
-      // Redirect to Set New Password page
-      this.$router.push("/reset-password");
-    }
+  if (!email.value) {
+    error.value = 'Please enter an email.'
+    return
   }
-};
+
+  const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.value, {
+    redirectTo: `${window.location.origin}/reset-password`
+  })
+
+  if (resetError) {
+    error.value = resetError.message || 'Something went wrong.'
+    return
+  }
+
+  success.value = 'Check your email for the reset link.'
+}
 </script>
+
 
 <style scoped>
 * {

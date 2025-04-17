@@ -19,11 +19,7 @@
           <i class="fas fa-calendar"></i>
           <span>Events</span>
         </router-link>
-        <router-link to="/archive" class="nav-item">
-          <i class="fas fa-archive"></i>
-          <span>Archive</span>
-        </router-link>
-        <router-link to="/requests" class="nav-item">
+        <router-link to="/approve-requests" class="nav-item">
           <i class="fas fa-envelope"></i>
           <span>Requests</span>
         </router-link>
@@ -60,7 +56,6 @@
         </div>
       </section>
 
-      <!-- Events Section -->
       <section class="events-section">
         <div class="section-header">
           <div>
@@ -86,19 +81,21 @@
         <div class="events-grid">
           <div v-for="event in filteredEvents" :key="event.id" class="event-card">
             <div class="event-date">
-              <span class="day">{{ formatDate(event.dateFrom).day || 'N/A' }}</span>
-              <span class="month">{{ formatDate(event.dateFrom).month || 'N/A' }}</span>
-              <span class="year">{{ formatDate(event.dateFrom).year || 'N/A' }}</span>
+              <span class="day">{{ formatDate(event.dateFrom).day }}</span>
+              <span class="month">{{ formatDate(event.dateFrom).month }}</span>
+              <span class="year">{{ formatDate(event.dateFrom).year }}</span>
             </div>
             <div class="event-details">
-              <h3>{{ event.name || 'Unknown Event' }}</h3>
+              <h3>{{ event.name }}</h3>
               <span class="event-time">
                 <i class="fas fa-clock"></i>
                 {{ formatDate(event.dateFrom).month }} {{ formatDate(event.dateFrom).day }} to
                 {{ formatDate(event.dateTo).month }} {{ formatDate(event.dateTo).day }}
               </span>
-              <span class="event-type">{{ formatEventType(event.event_type) || 'Unknown' }}</span>
-              <span class="event-venue"><i class="fas fa-map-marker-alt"></i> {{ event.venue || 'No Venue' }}</span>
+              <span class="event-type">{{ formatEventType(event.event_type) }}</span>
+              <span class="event-venue">
+                <i class="fas fa-map-marker-alt"></i> {{ event.venue || 'No Venue' }}
+              </span>
             </div>
             <div class="event-actions">
               <button class="delete-btn" @click="deleteEvent(event.id)">
@@ -109,12 +106,11 @@
         </div>
       </section>
 
-      <!-- Calendar Section (using vue-cal) -->
       <section class="calendar-section">
         <vue-cal
           :events="calendarEvents"
-          :disable-views="['years', 'year', 'month']"
           default-view="week"
+          :disable-views="['years', 'year', 'month']"
           @event-click="handleEventClick"
         >
           <template v-slot:event="{ event }">
@@ -134,11 +130,11 @@
         <form @submit.prevent="createEvent">
           <div class="form-group">
             <label>Event Name</label>
-            <input type="text" v-model="newEvent.name" required />
+            <input v-model="newEvent.name" required />
           </div>
           <div class="form-group">
             <label>Venue</label>
-            <input type="text" v-model="newEvent.venue" required />
+            <input v-model="newEvent.venue" required />
           </div>
           <div class="form-group">
             <label>Date From</label>
@@ -151,28 +147,24 @@
           <div class="form-group">
             <label>Event Type</label>
             <div v-if="isAddingNewType">
-              <input type="text" v-model="newEventType" placeholder="Enter new type" class="new-type-input" />
-              <button @click="confirmNewType" class="confirm-btn" type="button">Confirm</button>
-              <button @click="cancelNewType" class="cancel-btn" type="button">Cancel</button>
+              <input v-model="newEventType" placeholder="New type" />
+              <button type="button" @click="confirmNewType">Confirm</button>
+              <button type="button" @click="cancelNewType">Cancel</button>
             </div>
             <div v-else>
               <select v-model="newEvent.type" @change="checkAddNewType">
-                <option v-for="type in eventTypes" :key="type" :value="type">{{ formatEventType(type) }}</option>
+                <option v-for="type in eventTypes" :key="type" :value="type">
+                  {{ formatEventType(type) }}
+                </option>
                 <option value="add-new">Add New Type</option>
               </select>
             </div>
           </div>
           <div class="form-group">
             <label>Invite Alumni</label>
-            <div class="alumni-list">
-              <div v-for="alumnus in alumni" :key="alumnus.id">
-                <input
-  type="checkbox"
-  :value="alumnus.id"
-  v-model="newEvent.invitedAlumni"
-/>
-                <span>{{ alumnus.name }} ({{ alumnus.email }})</span>
-              </div>
+            <div v-for="alumnus in alumni" :key="alumnus.id">
+              <input type="checkbox" :value="alumnus.id" v-model="newEvent.invitedAlumni" />
+              <span>{{ alumnus.name }} ({{ alumnus.email }})</span>
             </div>
           </div>
           <div class="modal-actions">
@@ -185,118 +177,151 @@
   </div>
 </template>
 
-
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import VueCal from 'vue-cal';
-import 'vue-cal/dist/vuecal.css';
-import { supabase } from '../lib/supabaseClient';
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import VueCal from 'vue-cal'
+import 'vue-cal/dist/vuecal.css'
+import { supabase } from '../lib/supabaseClient'
 
-const router = useRouter();
-const events = ref([]);
-const alumni = ref([]);
-const eventTypes = ref([]);
-const calendarEvents = ref([]);
-const isCreateModalVisible = ref(false);
-const searchQuery = ref('');
-const selectedEventType = ref('');
-const isAddingNewType = ref(false);
-const newEventType = ref('');
-const newEvent = ref({ name: '', venue: '', dateFrom: '', dateTo: '', type: '', invitedAlumni: [] });
+const router = useRouter()
+const events = ref([])
+const calendarEvents = ref([])
+const alumni = ref([])
+const eventTypes = ref([])
+const searchQuery = ref('')
+const selectedEventType = ref('')
+const isCreateModalVisible = ref(false)
+const isAddingNewType = ref(false)
+const newEventType = ref('')
+const newEvent = ref({
+  name: '',
+  venue: '',
+  dateFrom: '',
+  dateTo: '',
+  type: '',
+  invitedAlumni: []
+})
 
-const formatEventType = (type) => type ? type.charAt(0).toUpperCase() + type.slice(1) : 'Unknown';
+const formatEventType = (type) =>
+  type ? type.charAt(0).toUpperCase() + type.slice(1) : 'Unknown'
 
-const activeEvents = computed(() => events.value.filter(e => new Date(e.dateTo) >= new Date()).length);
-const totalAttendees = computed(() => events.value.reduce((acc, event) => acc + (event.invited_count || 0), 0));
+const activeEvents = computed(() =>
+  events.value.filter((e) => new Date(e.dateTo) >= new Date()).length
+)
 
-const filteredEvents = computed(() => {
-  return events.value.filter(event => {
-    const matchName = event?.name?.toLowerCase()?.includes(searchQuery.value.toLowerCase());
-    const matchType = !selectedEventType.value || event.event_type === selectedEventType.value;
-    return matchName && matchType;
-  });
-});
+const totalAttendees = computed(() =>
+  events.value.reduce((acc, e) => acc + (e.invited_count || 0), 0)
+)
+
+const filteredEvents = computed(() =>
+  events.value.filter((event) => {
+    const matchName = event.name
+      ?.toLowerCase()
+      .includes(searchQuery.value.toLowerCase())
+    const matchType =
+      !selectedEventType.value || event.event_type === selectedEventType.value
+    return matchName && matchType
+  })
+)
 
 const formatDate = (dateStr) => {
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return { day: 'N/A', month: 'N/A', year: 'N/A' };
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime()))
+    return { day: 'N/A', month: 'N/A', year: 'N/A' }
   return {
     day: date.getDate(),
     month: date.toLocaleString('default', { month: 'short' }).toUpperCase(),
-    year: date.getFullYear(),
-  };
-};
-
-const fetchAlumni = async () => {
-  const { data, error } = await supabase.from('alumni_table').select('alumni_ID, alumni_Name, Email');
-  if (!error && data) {
-    alumni.value = data.map(a => ({ id: a.alumni_ID, name: a.alumni_Name, email: a.Email }));
+    year: date.getFullYear()
   }
-};
-
-const fetchEventTypes = async () => {
-  const { data, error } = await supabase.from('event_types').select('name');
-  if (!error && data) eventTypes.value = data.map(t => t.name);
-};
+}
 
 const fetchEvents = async () => {
-  const { data, error } = await supabase.from('events').select('id, name, venue, date_from, date_to, event_type, invited_count, status');
-  if (error || !data) return console.error('Error fetching events:', error);
+  const { data, error } = await supabase
+    .from('events')
+    .select('id, name, venue, date_from, date_to, event_type, invited_count')
+  if (error || !data) return console.error('Error fetching events:', error)
 
-  events.value = data.map(event => ({
+  events.value = data.map((event) => ({
     id: event.id,
     name: event.name,
     venue: event.venue,
     dateFrom: event.date_from,
     dateTo: event.date_to,
     event_type: event.event_type,
-    invited_count: event.invited_count,
-  }));
+    invited_count: event.invited_count
+  }))
 
-  calendarEvents.value = events.value.map(event => ({
-    start: new Date(event.dateFrom).toISOString(),
-    end: new Date(event.dateTo).toISOString(),
-    title: event.name,
-    content: event.event_type,
-  }));
-};
+  calendarEvents.value = events.value.map((event) => ({
+    title: event.name || 'Untitled',
+    content: formatEventType(event.event_type),
+    start: new Date(event.dateFrom),
+    end: new Date(event.dateTo)
+  }))
+}
 
-const showCreateEventModal = () => { isCreateModalVisible.value = true; };
+const fetchAlumni = async () => {
+  const { data, error } = await supabase
+    .from('alumni_table')
+    .select('alumni_ID, alumni_Name, Email')
+  if (!error && data) {
+    alumni.value = data.map((a) => ({
+      id: a.alumni_ID,
+      name: a.alumni_Name,
+      email: a.Email
+    }))
+  }
+}
+
+const fetchEventTypes = async () => {
+  const { data } = await supabase.from('event_types').select('name')
+  if (data) eventTypes.value = data.map((e) => e.name)
+}
+
+const showCreateEventModal = () => {
+  isCreateModalVisible.value = true
+}
+
 const hideCreateEventModal = () => {
-  isCreateModalVisible.value = false;
-  isAddingNewType.value = false;
-  newEventType.value = '';
-  newEvent.value = { name: '', venue: '', dateFrom: '', dateTo: '', type: '', invitedAlumni: [] };
-};
+  isCreateModalVisible.value = false
+  isAddingNewType.value = false
+  newEventType.value = ''
+  newEvent.value = {
+    name: '',
+    venue: '',
+    dateFrom: '',
+    dateTo: '',
+    type: '',
+    invitedAlumni: []
+  }
+}
 
 const checkAddNewType = () => {
   if (newEvent.value.type === 'add-new') {
-    isAddingNewType.value = true;
-    newEvent.value.type = '';
+    isAddingNewType.value = true
+    newEvent.value.type = ''
   }
-};
+}
 
 const confirmNewType = async () => {
-  if (!newEventType.value.trim()) return alert('Please enter a valid event type.');
-  const { error } = await supabase.from('event_types').insert([{ name: newEventType.value.trim().toLowerCase() }]);
-  if (error) return alert('Failed to add new event type.');
-  await fetchEventTypes();
-  newEvent.value.type = newEventType.value.trim().toLowerCase();
-  isAddingNewType.value = false;
-  newEventType.value = '';
-};
+  if (!newEventType.value.trim()) return
+  await supabase.from('event_types').insert([
+    { name: newEventType.value.trim().toLowerCase() }
+  ])
+  await fetchEventTypes()
+  newEvent.value.type = newEventType.value.trim().toLowerCase()
+  isAddingNewType.value = false
+  newEventType.value = ''
+}
 
 const cancelNewType = () => {
-  isAddingNewType.value = false;
-  newEventType.value = '';
-};
+  isAddingNewType.value = false
+  newEventType.value = ''
+}
 
 const createEvent = async () => {
   try {
-    const invitedAlumni = [...newEvent.value.invitedAlumni]; // Safe copy
-    console.log("Invited Alumni:", invitedAlumni); // 🔍 Verify it's not empty
-
+    const invitedAlumni = [...newEvent.value.invitedAlumni] // Ensure it's populated
     const { data: createdEvent, error: eventError } = await supabase
       .from('events')
       .insert([{
@@ -304,13 +329,15 @@ const createEvent = async () => {
         venue: newEvent.value.venue,
         date_from: newEvent.value.dateFrom,
         date_to: newEvent.value.dateTo,
-        event_type: newEvent.value.type
+        event_type: newEvent.value.type,
+        invited_count: invitedAlumni.length // ✅ Insert directly with count
       }])
-      .select();
+      .select()
 
-    if (eventError || !createdEvent?.[0]) throw new Error(eventError?.message || 'Insert failed');
+    if (eventError || !createdEvent?.[0])
+      throw new Error(eventError?.message || 'Insert failed')
 
-    const eventId = createdEvent[0].id;
+    const eventId = createdEvent[0].id
 
     await supabase.from('calendar_events').insert([{
       event_id: eventId,
@@ -318,111 +345,95 @@ const createEvent = async () => {
       end: new Date(newEvent.value.dateTo).toISOString(),
       title: newEvent.value.name,
       content: newEvent.value.type
-    }]);
+    }])
 
-    // 🔥 Verify this actually runs and shows correct count
-    console.log("Invited count to update:", invitedAlumni.length);
-
-    await supabase.from('events')
-      .update({ invited_count: invitedAlumni.length })
-      .eq('id', eventId);
-
-    await fetchEvents();
-    hideCreateEventModal();
-    alert('Event created successfully!');
+    await fetchEvents()
+    hideCreateEventModal()
+    alert('Event created successfully!')
   } catch (err) {
-    console.error("Create event failed:", err);
-    alert("Something went wrong while creating the event.");
+    console.error('Create event failed:', err)
+    alert('Something went wrong while creating the event.')
   }
-};
+}
 
 const deleteEvent = async (id) => {
-  const { error } = await supabase.from('events').delete().eq('id', id);
-  if (!error) await fetchEvents();
-};
+  const { error } = await supabase.from('events').delete().eq('id', id)
+  if (!error) await fetchEvents()
+}
 
 const handleLogout = () => {
-  localStorage.removeItem('user');
-  router.push('/');
-};
+  localStorage.removeItem('user')
+  router.push('/')
+}
+
+const handleEventClick = ({ event }) => {
+  if (!event || !event.title) {
+    console.warn('Event object missing or malformed:', event)
+    return
+  }
+  alert(`Event: ${event.title}\nType: ${event.content}`)
+}
 
 onMounted(() => {
-  fetchAlumni();
-  fetchEventTypes();
-  fetchEvents();
-});
+  fetchAlumni()
+  fetchEventTypes()
+  fetchEvents()
+})
 </script>
 
 
 
 <style scoped>
+/* Reset & Base */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
-
 body, html {
-  margin: 0;
-  padding: 0;
   overflow-x: hidden;
   width: 100%;
 }
-
 .homepage {
   display: flex;
   min-height: 100vh;
   background-color: #fff5f7;
   font-family: 'Inter', sans-serif;
   overflow: hidden;
-  width: 100%;
-  position: relative;
-  margin: 0;
-  padding: 0;
 }
 
-/* Sidebar Styles */
+/* Sidebar */
 .sidebar {
   position: fixed;
-  left: 0;
-  top: 0;
-  bottom: 0;
+  left: 0; top: 0; bottom: 0;
   width: 280px;
-  background: linear-gradient(180deg, #ff4b7c 0%, #ff1c55 100%);
+  background: linear-gradient(180deg, #ff4b7c, #ff1c55);
   padding: 30px;
   color: white;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   z-index: 100;
-  margin: 0;
 }
-
 .logo {
   display: flex;
   align-items: center;
   gap: 15px;
   margin-bottom: 40px;
 }
-
 .logo img {
   width: 60px;
-  height: auto;
   filter: brightness(0) invert(1);
 }
-
 .logo h2 {
   font-size: 24px;
-  font-weight: 600;
   color: white;
 }
-
 .nav-links {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
-
 .nav-item {
   display: flex;
   align-items: center;
@@ -431,59 +442,50 @@ body, html {
   padding: 12px;
   border-radius: 14px;
   text-decoration: none;
-  transition: all 0.3s ease;
   font-size: 18px;
+  transition: all 0.3s ease;
 }
-
 .nav-item:hover, .nav-item.active {
   background: rgba(255, 255, 255, 0.2);
   color: white;
 }
-
 .logout {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #ffffff;
+  color: white;
   background-color: #ff1c55;
-  text-decoration: none;
   padding: 12px;
   border-radius: 14px;
-  margin-top: auto;
-  transition: all 0.3s ease;
   font-size: 18px;
+  transition: all 0.3s ease;
 }
-
 .logout:hover {
   background: #ff4b7c;
 }
 
-/* Main Content Styles */
+/* Main Content */
 .main-content {
-  flex: 1;
   margin-left: 280px;
   padding: 40px;
-  overflow-y: auto;
-  min-width: 0;
   width: calc(100% - 280px);
+  overflow-y: auto;
 }
 
-/* Stats Cards Section */
+/* Stats Cards */
 .stats-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 24px;
   margin-bottom: 24px;
 }
-
 .card {
   background: white;
   padding: 32px;
   border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(255, 75, 124, 0.1);
   text-align: center;
+  box-shadow: 0 4px 20px rgba(255, 75, 124, 0.1);
 }
-
 .card-icon {
   width: 70px;
   height: 70px;
@@ -495,40 +497,27 @@ body, html {
   font-size: 28px;
   color: white;
 }
-
-.card-icon.pink {
-  background: linear-gradient(135deg, #ff4b7c, #ff8faf);
-}
-
-.card-icon.green {
-  background: linear-gradient(135deg, #ff6b98, #ff97b8);
-}
-
-.card-icon.purple {
-  background: linear-gradient(135deg, #ff4b7c, #ff799e);
-}
-
+.card-icon.pink { background: linear-gradient(135deg, #ff4b7c, #ff8faf); }
+.card-icon.green { background: linear-gradient(135deg, #ff6b98, #ff97b8); }
+.card-icon.purple { background: linear-gradient(135deg, #ff4b7c, #ff799e); }
 .card h3 {
   color: black;
   font-size: 18px;
   margin-bottom: 8px;
 }
-
 .card p {
   color: black;
   font-size: 28px;
   font-weight: 700;
-  margin-bottom: 0;
 }
-
-/* Events Section Styles */
+/* Events Section */
 .events-section {
   background: white;
   padding: 32px;
   border-radius: 20px;
   box-shadow: 0 4px 20px rgba(255, 75, 124, 0.1);
+  margin-bottom: 32px;
 }
-
 .section-header {
   display: flex;
   justify-content: space-between;
@@ -537,20 +526,16 @@ body, html {
   padding-bottom: 16px;
   border-bottom: 1px solid #ffe0e5;
 }
-
 .section-header h2 {
   color: #ff1c55;
   font-size: 24px;
   font-weight: 600;
-  margin: 0;
 }
-
 .section-header p {
   color: #ffb3c7;
   font-size: 16px;
-  margin: 4px 0 0 0;
+  margin: 4px 0 0;
 }
-
 .create-button {
   background: #ff4b7c;
   color: white;
@@ -558,26 +543,24 @@ body, html {
   padding: 14px 28px;
   border-radius: 14px;
   font-weight: 500;
+  font-size: 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.3s ease;
-  font-size: 16px;
 }
-
 .create-button:hover {
   background: #ff1c55;
   transform: translateY(-2px);
 }
 
-/* Filter Bar Styles */
+/* Filter */
 .filter-bar {
   display: flex;
   gap: 16px;
   margin-bottom: 24px;
+  flex-wrap: wrap;
 }
-
 .search-box {
   flex: 1;
   display: flex;
@@ -587,21 +570,18 @@ body, html {
   border-radius: 14px;
   border: 1px solid #ffccd4;
 }
-
 .search-box i {
   color: #ffb3c7;
   margin-right: 12px;
 }
-
 .search-box input {
+  background: transparent;
   border: none;
   outline: none;
-  background: transparent;
   width: 100%;
   color: #ff1c55;
   font-size: 16px;
 }
-
 .filter-select {
   padding: 14px 18px;
   border: 1px solid #ffccd4;
@@ -613,13 +593,12 @@ body, html {
   cursor: pointer;
 }
 
-/* Events Grid Styles */
+/* Events Grid */
 .events-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
 }
-
 .event-card {
   background: white;
   border-radius: 20px;
@@ -631,12 +610,10 @@ body, html {
   transition: all 0.3s ease;
   align-items: start;
 }
-
 .event-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 25px rgba(255, 75, 124, 0.15);
 }
-
 .event-date {
   display: flex;
   flex-direction: column;
@@ -646,31 +623,22 @@ body, html {
   background: #ffe0e5;
   min-width: 70px;
 }
-
 .event-date .day {
   font-size: 28px;
   font-weight: 700;
   color: #ff1c55;
-  line-height: 1;
 }
-
 .event-date .month {
   font-size: 14px;
   color: #ffb3c7;
   margin-top: 4px;
 }
-
-.event-details {
-  flex: 1;
-}
-
 .event-details h3 {
   color: #ff1c55;
   font-size: 18px;
   font-weight: 600;
-  margin: 0 0 8px 0;
+  margin: 0 0 8px;
 }
-
 .event-time {
   color: #ffb3c7;
   font-size: 16px;
@@ -678,7 +646,6 @@ body, html {
   align-items: center;
   gap: 6px;
 }
-
 .event-type {
   display: inline-block;
   padding: 6px 14px;
@@ -689,340 +656,213 @@ body, html {
   margin-top: 8px;
   font-weight: 500;
 }
-
+.event-venue {
+  font-size: 14px;
+  color: #888;
+  display: block;
+  margin-top: 6px;
+}
 .event-actions {
   display: flex;
   flex-direction: column;
   gap: 8px;
   justify-content: center;
 }
-
-.invite-btn, .delete-btn {
+.delete-btn {
   background: #ff4b7c;
   color: white;
   border: none;
   padding: 10px 18px;
   border-radius: 8px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
   font-size: 16px;
-  font-weight: 500;
   transition: all 0.3s ease;
-  white-space: nowrap;
-  width: 100%;
-  justify-content: center;
 }
-
-.invite-btn:hover, .delete-btn:hover {
+.delete-btn:hover {
   background: #ff1c55;
-  transform: translateY(-2px);
 }
 
-/* Modal Styles */
+/* Calendar */
+.calendar-section {
+  margin-top: 32px;
+  background: white;
+  padding: 24px;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(255, 75, 124, 0.1);
+}
+.vuecal__cell {
+  font-family: 'Inter', sans-serif !important;
+}
+.vuecal__event {
+  white-space: normal !important;
+  word-break: break-word;
+  padding: 6px 8px;
+  font-size: 13px;
+  border-radius: 8px;
+  line-height: 1.3;
+  background-color: #ffccd4 !important;
+  color: #333 !important;
+  font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: left;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.vuecal__event strong {
+  font-size: 13px;
+  color: #ff1c55;
+  font-weight: bold;
+}
+
+.vuecal__event p {
+  margin: 2px 0 0 0;
+  font-size: 12px;
+  color: #ff4b7c;
+}
+
+/* Modal */
 .modal {
   position: fixed;
-  top: 0;
-  left: 0;
+  top: 0; left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0,0,0,0.5);
   display: flex;
-  justify-content: center;
   align-items: center;
-  z-index: 1000;
+  justify-content: center;
+  z-index: 999;
 }
-
 .modal-content {
   background: white;
-  padding: 40px;
+  padding: 32px;
   border-radius: 20px;
-  width: 100%;
   max-width: 600px;
-  max-height: 80vh;
+  width: 100%;
+  max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 8px 25px rgba(255, 75, 124, 0.15);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
-
 .form-group {
   margin-bottom: 20px;
 }
-
 .form-group label {
-  display: block;
-  margin-bottom: 8px;
-  color: #ff1c55;
   font-weight: 600;
-  font-size: 16px;
+  color: #ff1c55;
+  margin-bottom: 8px;
+  display: block;
 }
-
 .form-group input,
 .form-group select {
   width: 100%;
-  padding: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
   border: 1px solid #ffccd4;
-  border-radius: 14px;
-  font-size: 16px;
-  color: #ff1c55;
+  font-size: 14px;
   background: #ffe0e5;
-  transition: all 0.3s ease;
 }
-
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: #ff4b7c;
-  background: white;
-}
-
-/* Buttons for Add New Type */
 .new-type-input {
-  width: calc(100% - 120px);
-  padding: 10px;
-  border: 1px solid #ffccd4;
+  width: 100%;
+  margin-top: 10px;
+}
+.confirm-btn, .cancel-btn {
+  margin-top: 10px;
+  padding: 10px 16px;
   border-radius: 8px;
   font-size: 14px;
-  margin-right: 8px;
+  font-weight: 500;
+  cursor: pointer;
 }
-
 .confirm-btn {
   background: #ff4b7c;
   color: white;
   border: none;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s ease;
 }
-
-.confirm-btn:hover {
-  background: #ff1c55;
-}
-
 .cancel-btn {
   background: #ffe0e5;
   color: #ff1c55;
   border: none;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s ease;
 }
-
+.confirm-btn:hover {
+  background: #ff1c55;
+}
 .cancel-btn:hover {
   background: #ffccd4;
 }
-
-/* Modal Actions */
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 16px;
+  gap: 12px;
   margin-top: 24px;
 }
-
 .modal-actions button {
-  background: #ff4b7c;
-  color: white;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 14px;
   border: none;
-  padding: 14px 28px;
-  border-radius: 14px;
-  font-size: 16px;
-  font-weight: 500;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.3s ease;
+  font-weight: 600;
 }
-
-.modal-actions button:hover {
-  background: #ff1c55;
-}
-
-.modal-actions .cancel-btn {
+.modal-actions button:first-child {
   background: #ffe0e5;
   color: #ff1c55;
 }
-
-.modal-actions .cancel-btn:hover {
-  background: #ffccd4;
-}
-
-.modal-actions .submit-btn {
+.modal-actions button:last-child {
   background: #ff4b7c;
   color: white;
 }
-
-.modal-actions .submit-btn:hover {
+.modal-actions button:last-child:hover {
   background: #ff1c55;
 }
 
-/* Responsive Styles */
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #ffe0e5;
+}
+::-webkit-scrollbar-thumb {
+  background: #ff4b7c;
+  border-radius: 4px;
+}
+
+/* Responsive */
 @media (max-width: 1024px) {
   .stats-cards {
     grid-template-columns: repeat(2, 1fr);
   }
-  
-  .events-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
-
 @media (max-width: 768px) {
+  .stats-cards,
+  .events-grid {
+    grid-template-columns: 1fr;
+  }
+  .main-content {
+    padding: 20px;
+    margin-left: 0;
+    width: 100%;
+  }
   .sidebar {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
     position: sticky;
     top: 0;
     width: 100%;
     height: auto;
     padding: 15px;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
   }
-
   .nav-links {
     flex-direction: row;
     gap: 10px;
   }
-
-  .logo {
-    margin-bottom: 0;
-  }
-
-  .logo h2 {
+  .logo h2, .nav-item span, .logout span {
     display: none;
   }
-
-  .nav-item span, 
-  .logout span {
-    display: none;
-  }
-
-  .nav-item, 
-  .logout {
-    justify-content: center;
+  .nav-item, .logout {
     padding: 8px;
   }
-
-  .nav-item i, 
-  .logout i {
-    font-size: 20px;
-    margin: 0;
-  }
-
-  .main-content {
-    margin-left: 0;
-    width: 100%;
-    padding: 20px;
-  }
-
-  .stats-cards {
-    grid-template-columns: 1fr;
-  }
-
-  .events-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .event-card {
-    grid-template-columns: auto 1fr;
-  }
-
-  .event-actions {
-    grid-column: 1 / -1;
-    flex-direction: row;
-    justify-content: flex-end;
-  }
-
-  .filter-bar {
-    flex-direction: column;
-  }
-
-  .modal-content {
-    margin: 20px;
-    padding: 20px;
-  }
-}
-
-@media (max-width: 480px) {
-  .nav-item, 
-  .logout {
-    padding: 8px;
-  }
-
-  .card {
-    padding: 15px;
-  }
-
-  .chart-container {
-    padding: 15px;
-    min-height: 250px;
-  }
-}
-
-@media (max-width: 320px) {
-  .stats-cards {
-    grid-template-columns: 1fr;
-  }
-
-  .nav-links {
-    gap: 5px;
-  }
-}
-
-@media screen and (orientation: landscape) and (max-height: 500px) {
-  .homepage {
-    height: auto;
-    min-height: 100vh;
-  }
-
-  .main-content {
-    height: auto;
-  }
-}
-
-@media screen and (min-width: 2000px) {
-  .homepage {
-    max-width: 2000px;
-    margin: 0 auto;
-  }
-}
-
-/* Modern scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #ffe0e5;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #ff4b7c;
-  border-radius: 4px;
-}
-.alert.success-alert {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background: #4BB543;
-  color: white;
-  padding: 14px 24px;
-  border-radius: 10px;
-  font-weight: bold;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 9999;
-  animation: fade-in-out 4s ease;
-}
-
-@keyframes fade-in-out {
-  0% { opacity: 0; transform: translateY(-20px); }
-  10%, 90% { opacity: 1; transform: translateY(0); }
-  100% { opacity: 0; transform: translateY(-20px); }
 }
 </style>

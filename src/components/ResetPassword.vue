@@ -41,43 +41,54 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { supabase } from '../lib/supabaseClient'
 
-const newPassword = ref('');
-const confirmPassword = ref('');
-const error = ref('');
-const success = ref('');
+const newPassword = ref('')
+const confirmPassword = ref('')
+const error = ref('')
+const success = ref('')
+const router = useRouter()
 
-const router = useRouter();
+const handleResetPassword = async () => {
+  error.value = ''
+  success.value = ''
 
-const handleResetPassword = () => {
   if (!newPassword.value || !confirmPassword.value) {
-    error.value = "Please enter both fields.";
-    return;
+    error.value = 'Please enter both fields.'
+    return
   }
-  if (newPassword.value !== confirmPassword.value) {
-    error.value = "Passwords do not match!";
-    return;
-  }
-  
-  // Store the new password in local storage (temporary)
-  const email = sessionStorage.getItem("resetEmail");
-  const validEmails = ["admin@admin.com", "collegehead@admin.com"];
 
-  if (validEmails.includes(email)) {
-    localStorage.setItem(`password_${email}`, newPassword.value);
-    sessionStorage.removeItem("resetEmail");
-    success.value = "Password updated! Redirecting to login...";
-    
-    setTimeout(() => {
-      router.push("/");
-    }, 2000);
-  } else {
-    error.value = "Session expired or invalid email. Please request a new reset.";
+  if (newPassword.value !== confirmPassword.value) {
+    error.value = 'Passwords do not match!'
+    return
   }
-};
+
+  const { error: updateError } = await supabase.auth.updateUser({
+    password: newPassword.value
+  })
+
+  if (updateError) {
+    error.value = updateError.message || 'Failed to update password.'
+    return
+  }
+
+  success.value = 'Password updated! Redirecting to login...'
+  setTimeout(() => {
+    router.push('/')
+  }, 2000)
+}
+
+onMounted(async () => {
+  const { session, error: sessionError } = await supabase.auth.getSession()
+  if (!session || sessionError) {
+    error.value = 'Session expired or invalid. Please request another reset link.'
+  }
+})
 </script>
+
+
 
 <style scoped>
 * {
