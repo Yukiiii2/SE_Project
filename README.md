@@ -2,6 +2,7 @@
 
 ## Project setup
 ```
+git clone https://github.com/Yukiiii2/SE_Project.git
 npm install
 ```
 
