@@ -42,21 +42,21 @@
             <i class="fas fa-calendar"></i>
           </div>
           <h3>Total Events</h3>
-          <p>{{ events.length }}</p>
+          <p>{{ events.length || 0 }}</p>
         </div>
         <div class="card">
           <div class="card-icon green">
             <i class="fas fa-user-check"></i>
           </div>
           <h3>Active Events</h3>
-          <p>{{ activeEvents }}</p>
+          <p>{{ activeEvents || 0 }}</p>
         </div>
         <div class="card">
           <div class="card-icon purple">
             <i class="fas fa-users"></i>
           </div>
           <h3>Total Attendees</h3>
-          <p>{{ totalAttendees }}</p>
+          <p>{{ totalAttendees || 0 }}</p>
         </div>
       </section>
 
@@ -86,16 +86,19 @@
         <div class="events-grid">
           <div v-for="event in filteredEvents" :key="event.id" class="event-card">
             <div class="event-date">
-              <span class="day">{{ formatDate(event.dateFrom).day }}</span>
-              <span class="month">{{ formatDate(event.dateFrom).month }}</span>
+              <span class="day">{{ formatDate(event.dateFrom).day || 'N/A' }}</span>
+              <span class="month">{{ formatDate(event.dateFrom).month || 'N/A' }}</span>
+              <span class="year">{{ formatDate(event.dateFrom).year || 'N/A' }}</span>
             </div>
             <div class="event-details">
-              <h3>{{ event.name }}</h3>
+              <h3>{{ event.name || 'Unknown Event' }}</h3>
               <span class="event-time">
-                <i class="fas fa-clock"></i> {{ event.dateFrom }} to {{ event.dateTo }}
+                <i class="fas fa-clock"></i>
+                {{ formatDate(event.dateFrom).month }} {{ formatDate(event.dateFrom).day }} to
+                {{ formatDate(event.dateTo).month }} {{ formatDate(event.dateTo).day }}
               </span>
-              <span class="event-type">{{ formatEventType(event.type) }}</span>
-              <span class="event-venue"><i class="fas fa-map-marker-alt"></i> {{ event.venue }}</span>
+              <span class="event-type">{{ formatEventType(event.event_type) || 'Unknown' }}</span>
+              <span class="event-venue"><i class="fas fa-map-marker-alt"></i> {{ event.venue || 'No Venue' }}</span>
             </div>
             <div class="event-actions">
               <button class="delete-btn" @click="deleteEvent(event.id)">
@@ -106,16 +109,13 @@
         </div>
       </section>
 
-      <!-- Calendar View Section -->
+      <!-- Calendar Section (using vue-cal) -->
       <section class="calendar-section">
         <vue-cal
           :events="calendarEvents"
           :disable-views="['years', 'year', 'month']"
           default-view="week"
           @event-click="handleEventClick"
-          :on-event-create="false"
-          :on-event-drag="false"
-          :on-event-resize="false"
         >
           <template v-slot:event="{ event }">
             <div class="custom-event">
@@ -151,14 +151,9 @@
           <div class="form-group">
             <label>Event Type</label>
             <div v-if="isAddingNewType">
-              <input
-                type="text"
-                v-model="newEventType"
-                placeholder="Enter new type"
-                class="new-type-input"
-              />
-              <button @click="confirmNewType" class="confirm-btn">Confirm</button>
-              <button @click="cancelNewType" class="cancel-btn">Cancel</button>
+              <input type="text" v-model="newEventType" placeholder="Enter new type" class="new-type-input" />
+              <button @click="confirmNewType" class="confirm-btn" type="button">Confirm</button>
+              <button @click="cancelNewType" class="cancel-btn" type="button">Cancel</button>
             </div>
             <div v-else>
               <select v-model="newEvent.type" @change="checkAddNewType">
@@ -171,7 +166,11 @@
             <label>Invite Alumni</label>
             <div class="alumni-list">
               <div v-for="alumnus in alumni" :key="alumnus.id">
-                <input type="checkbox" :value="alumnus.id" v-model="newEvent.invitedAlumni" />
+                <input
+  type="checkbox"
+  :value="alumnus.id"
+  v-model="newEvent.invitedAlumni"
+/>
                 <span>{{ alumnus.name }} ({{ alumnus.email }})</span>
               </div>
             </div>
@@ -186,114 +185,176 @@
   </div>
 </template>
 
-<script>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import VueCal from 'vue-cal';
 import 'vue-cal/dist/vuecal.css';
+import { supabase } from '../lib/supabaseClient';
 
-export default {
-  name: 'EventManagement',
-  components: { VueCal },
-  data() {
-    return {
-      events: [],
-      alumni: [
-        { id: 1, name: 'John Doe', email: 'john@example.com' },
-        { id: 2, name: 'Jane Smith', email: 'jane@example.com' },
-        { id: 3, name: 'Emily Johnson', email: 'emily@example.com' }
-      ],
-      isCreateModalVisible: false,
-      searchQuery: '',
-      selectedEventType: '',
-      activeEvents: 2,
-      totalAttendees: 45,
-      eventTypes: ['major', 'minor', 'research', 'mentorship'],
-      isAddingNewType: false, // Tracks if the user is adding a new type
-      newEventType: '', // Stores the new type being added
-      newEvent: {
-        name: '',
-        venue: '',
-        dateFrom: '',
-        dateTo: '',
-        type: '',
-        invitedAlumni: []
-      }
-    };
-  },
-  computed: {
-    filteredEvents() {
-      return this.events.filter(event => {
-        const matchName = event.name.toLowerCase().includes(this.searchQuery.toLowerCase());
-        const matchType = !this.selectedEventType || event.type === this.selectedEventType;
-        return matchName && matchType;
-      });
-    },
-    calendarEvents() {
-      return this.events.map(event => ({
-        start: `${event.dateFrom}`,
-        end: `${event.dateTo}`,
-        title: event.name,
-        content: event.type
-      }));
-    }
-  },
-  methods: {
-    showCreateEventModal() {
-      this.isCreateModalVisible = true;
-    },
-    hideCreateEventModal() {
-      this.isCreateModalVisible = false;
-      this.newEvent = { name: '', venue: '', dateFrom: '', dateTo: '', type: '', invitedAlumni: [] };
-    },
-    createEvent() {
-      const event = { ...this.newEvent, id: Date.now() };
-      this.events.push(event);
-      this.hideCreateEventModal();
-    },
-    checkAddNewType() {
-      if (this.newEvent.type === 'add-new') {
-        this.isAddingNewType = true; // Show the input field for adding a new type
-        this.newEventType = ''; // Reset the input field
-      }
-    },
-    confirmNewType() {
-      const formattedType = this.newEventType.trim().toLowerCase();
-      if (formattedType && !this.eventTypes.includes(formattedType)) {
-        this.eventTypes.push(formattedType); // Add the new type to the list
-        this.newEvent.type = formattedType; // Set the new type as the selected value
-        this.isAddingNewType = false; // Hide the input field
-      } else if (this.eventTypes.includes(formattedType)) {
-        alert('This type already exists.');
-      } else {
-        alert('Please enter a valid type.');
-      }
-    },
-    cancelNewType() {
-      this.isAddingNewType = false; // Hide the input field
-      this.newEvent.type = ''; // Reset the selection
-    },
-    deleteEvent(id) {
-      this.events = this.events.filter(e => e.id !== id);
-    },
-    handleEventClick(event) {
-      alert(`Event: ${event.title}`);
-    },
-    formatDate(dateStr) {
-      const date = new Date(dateStr);
-      return {
-        day: date.getDate(),
-        month: date.toLocaleString('default', { month: 'short' }).toUpperCase()
-      };
-    },
-    formatEventType(type) {
-      return type.charAt(0).toUpperCase() + type.slice(1);
-    },
-    handleLogout() {
-      localStorage.removeItem('user');
-      this.$router.push('/');
-    }
+const router = useRouter();
+const events = ref([]);
+const alumni = ref([]);
+const eventTypes = ref([]);
+const calendarEvents = ref([]);
+const isCreateModalVisible = ref(false);
+const searchQuery = ref('');
+const selectedEventType = ref('');
+const isAddingNewType = ref(false);
+const newEventType = ref('');
+const newEvent = ref({ name: '', venue: '', dateFrom: '', dateTo: '', type: '', invitedAlumni: [] });
+
+const formatEventType = (type) => type ? type.charAt(0).toUpperCase() + type.slice(1) : 'Unknown';
+
+const activeEvents = computed(() => events.value.filter(e => new Date(e.dateTo) >= new Date()).length);
+const totalAttendees = computed(() => events.value.reduce((acc, event) => acc + (event.invited_count || 0), 0));
+
+const filteredEvents = computed(() => {
+  return events.value.filter(event => {
+    const matchName = event?.name?.toLowerCase()?.includes(searchQuery.value.toLowerCase());
+    const matchType = !selectedEventType.value || event.event_type === selectedEventType.value;
+    return matchName && matchType;
+  });
+});
+
+const formatDate = (dateStr) => {
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return { day: 'N/A', month: 'N/A', year: 'N/A' };
+  return {
+    day: date.getDate(),
+    month: date.toLocaleString('default', { month: 'short' }).toUpperCase(),
+    year: date.getFullYear(),
+  };
+};
+
+const fetchAlumni = async () => {
+  const { data, error } = await supabase.from('alumni_table').select('alumni_ID, alumni_Name, Email');
+  if (!error && data) {
+    alumni.value = data.map(a => ({ id: a.alumni_ID, name: a.alumni_Name, email: a.Email }));
   }
 };
+
+const fetchEventTypes = async () => {
+  const { data, error } = await supabase.from('event_types').select('name');
+  if (!error && data) eventTypes.value = data.map(t => t.name);
+};
+
+const fetchEvents = async () => {
+  const { data, error } = await supabase.from('events').select('id, name, venue, date_from, date_to, event_type, invited_count, status');
+  if (error || !data) return console.error('Error fetching events:', error);
+
+  events.value = data.map(event => ({
+    id: event.id,
+    name: event.name,
+    venue: event.venue,
+    dateFrom: event.date_from,
+    dateTo: event.date_to,
+    event_type: event.event_type,
+    invited_count: event.invited_count,
+  }));
+
+  calendarEvents.value = events.value.map(event => ({
+    start: new Date(event.dateFrom).toISOString(),
+    end: new Date(event.dateTo).toISOString(),
+    title: event.name,
+    content: event.event_type,
+  }));
+};
+
+const showCreateEventModal = () => { isCreateModalVisible.value = true; };
+const hideCreateEventModal = () => {
+  isCreateModalVisible.value = false;
+  isAddingNewType.value = false;
+  newEventType.value = '';
+  newEvent.value = { name: '', venue: '', dateFrom: '', dateTo: '', type: '', invitedAlumni: [] };
+};
+
+const checkAddNewType = () => {
+  if (newEvent.value.type === 'add-new') {
+    isAddingNewType.value = true;
+    newEvent.value.type = '';
+  }
+};
+
+const confirmNewType = async () => {
+  if (!newEventType.value.trim()) return alert('Please enter a valid event type.');
+  const { error } = await supabase.from('event_types').insert([{ name: newEventType.value.trim().toLowerCase() }]);
+  if (error) return alert('Failed to add new event type.');
+  await fetchEventTypes();
+  newEvent.value.type = newEventType.value.trim().toLowerCase();
+  isAddingNewType.value = false;
+  newEventType.value = '';
+};
+
+const cancelNewType = () => {
+  isAddingNewType.value = false;
+  newEventType.value = '';
+};
+
+const createEvent = async () => {
+  try {
+    const invitedAlumni = [...newEvent.value.invitedAlumni]; // Safe copy
+    console.log("Invited Alumni:", invitedAlumni); // 🔍 Verify it's not empty
+
+    const { data: createdEvent, error: eventError } = await supabase
+      .from('events')
+      .insert([{
+        name: newEvent.value.name,
+        venue: newEvent.value.venue,
+        date_from: newEvent.value.dateFrom,
+        date_to: newEvent.value.dateTo,
+        event_type: newEvent.value.type
+      }])
+      .select();
+
+    if (eventError || !createdEvent?.[0]) throw new Error(eventError?.message || 'Insert failed');
+
+    const eventId = createdEvent[0].id;
+
+    await supabase.from('calendar_events').insert([{
+      event_id: eventId,
+      start: new Date(newEvent.value.dateFrom).toISOString(),
+      end: new Date(newEvent.value.dateTo).toISOString(),
+      title: newEvent.value.name,
+      content: newEvent.value.type
+    }]);
+
+    // 🔥 Verify this actually runs and shows correct count
+    console.log("Invited count to update:", invitedAlumni.length);
+
+    await supabase.from('events')
+      .update({ invited_count: invitedAlumni.length })
+      .eq('id', eventId);
+
+    await fetchEvents();
+    hideCreateEventModal();
+    alert('Event created successfully!');
+  } catch (err) {
+    console.error("Create event failed:", err);
+    alert("Something went wrong while creating the event.");
+  }
+};
+
+const deleteEvent = async (id) => {
+  const { error } = await supabase.from('events').delete().eq('id', id);
+  if (!error) await fetchEvents();
+};
+
+const handleLogout = () => {
+  localStorage.removeItem('user');
+  router.push('/');
+};
+
+onMounted(() => {
+  fetchAlumni();
+  fetchEventTypes();
+  fetchEvents();
+});
 </script>
+
+
+
 <style scoped>
 * {
   margin: 0;
@@ -944,5 +1005,24 @@ body, html {
 ::-webkit-scrollbar-thumb {
   background: #ff4b7c;
   border-radius: 4px;
+}
+.alert.success-alert {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #4BB543;
+  color: white;
+  padding: 14px 24px;
+  border-radius: 10px;
+  font-weight: bold;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  animation: fade-in-out 4s ease;
+}
+
+@keyframes fade-in-out {
+  0% { opacity: 0; transform: translateY(-20px); }
+  10%, 90% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-20px); }
 }
 </style>

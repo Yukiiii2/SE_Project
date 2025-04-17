@@ -28,7 +28,13 @@
         <input type="file" ref="fileInput" @change="importCSV" style="display: none;" />
       </div>
 
-      <input type="text" class="search-bar" v-model="searchTerm" placeholder="Search contacts..." />
+      <div style="display: flex; gap: 10px; margin-bottom: 30px; margin-left: 60px; align-items: center;">
+        <input type="text" class="search-bar" v-model="searchTerm" placeholder="Search contacts..." />
+        <select v-model="expertiseFilter" style="padding: 14px; border: 1px solid #FFD6DE; border-radius: 16px; background: white; font-size: 15px;">
+          <option value="">All Expertise</option>
+          <option v-for="tag in expertiseOptions" :key="tag.id" :value="tag.name">{{ tag.name }}</option>
+        </select>
+      </div>
 
       <table>
         <thead>
@@ -91,6 +97,8 @@ import { supabase } from '../lib/supabaseClient';
 const router = useRouter();
 const contacts = ref([]);
 const searchTerm = ref('');
+const expertiseFilter = ref('');
+const expertiseOptions = ref([]);
 const selectedContacts = ref([]);
 const currentPage = ref(1);
 const pageSize = ref(10);
@@ -99,11 +107,20 @@ const fileInput = ref(null);
 
 const filteredContacts = computed(() => {
   const search = searchTerm.value.toLowerCase();
-  return contacts.value.filter(contact =>
-    Object.values(contact).some(val =>
+
+  return contacts.value.filter(contact => {
+    const matchesSearch = Object.values(contact).some(val =>
       typeof val === 'string' && val.toLowerCase().includes(search)
-    )
-  );
+    );
+
+    const matchesExpertise =
+      !expertiseFilter.value ||
+      contact.expertise_tags?.some(tag =>
+        tag.name.toLowerCase() === expertiseFilter.value.toLowerCase()
+      );
+
+    return matchesSearch && matchesExpertise;
+  });
 });
 
 const totalPages = computed(() => Math.ceil(filteredContacts.value.length / pageSize.value));
@@ -113,9 +130,7 @@ const paginatedContacts = computed(() => {
   return filteredContacts.value.slice(start, start + pageSize.value);
 });
 
-const toggleSidebar = () => {
-  isSidebarOpen.value = !isSidebarOpen.value;
-};
+const toggleSidebar = () => { isSidebarOpen.value = !isSidebarOpen.value; };
 
 const handleLogout = () => {
   localStorage.removeItem('user');
@@ -153,6 +168,7 @@ const importCSV = async (event) => {
       Email: row.Email || '',
       Occupation: row.Occupation || '',
       Status: row.Status || '',
+      expertise: row.expertise || '', // expertise string in column (e.g. "Technical Expert")
     }));
 
     const { error } = await supabase.from('alumni_table').insert(newContacts);
@@ -162,7 +178,20 @@ const importCSV = async (event) => {
 };
 
 const exportCSV = () => {
-  const csvContent = Papa.unparse(contacts.value);
+  const flatExport = contacts.value.map(contact => ({
+    Alumni_ID: contact.alumni_ID,
+    Alumni_Firstname: contact.alumni_firstname,
+    Alumni_Lastname: contact.Alumni_LastName,
+    college: contact.college,
+    Year_Graduated: contact.Year_Graduated,
+    Program: contact.Program,
+    Email: contact.Email,
+    Occupation: contact.Occupation_Status,
+    Status: contact.Status,
+    expertise: contact.expertise_tags?.map(tag => tag.name).join(', ') || ''
+  }));
+
+  const csvContent = Papa.unparse(flatExport);
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
@@ -205,12 +234,39 @@ const goToPage = (page) => {
 };
 
 const fetchContacts = async () => {
-  const { data, error } = await supabase.from('alumni_table').select('*');
-  if (!error) contacts.value = data;
+  const { data: alumni, error } = await supabase
+    .from('alumni_table')
+    .select(`
+      *,
+      alumni_expertise (
+        expertise_tags (
+          id,
+          name
+        )
+      )
+    `);
+
+  if (error) return console.error('Failed to fetch contacts:', error);
+
+  contacts.value = alumni.map(a => ({
+    ...a,
+    expertise_tags: a.alumni_expertise?.map(x => x.expertise_tags) || []
+  }));
 };
 
-onMounted(fetchContacts);
+const fetchExpertiseTags = async () => {
+  const { data, error } = await supabase.from('expertise_tags').select('*');
+  if (!error) expertiseOptions.value = data;
+};
+
+onMounted(() => {
+  fetchContacts();
+  fetchExpertiseTags();
+});
 </script>
+
+
+
 
 
 <style scoped>
@@ -250,12 +306,11 @@ onMounted(fetchContacts);
   margin-bottom: 40px;
 }
 
-/* Move "Alumni Connect" lower to avoid overlap with the button */
 .logo {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 80px; /* Adjusted to move below the toggle button */
+  margin-top: 80px;
 }
 
 .logo img {
@@ -363,7 +418,7 @@ h1 {
 .actions {
   display: flex;
   gap: 12px;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
   margin-left: 60px;
 }
 
@@ -401,57 +456,41 @@ h1 {
   cursor: not-allowed;
 }
 
-/* Filter Tab */
-.filter-tab {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: white;
-  padding: 20px;
-  border-radius: 16px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
-.filter-tab h3 {
-  margin: 0 0 10px 0;
-  font-size: 18px;
-  color: #2D1E2F;
-}
-
-.filter-tab label {
+/* Search + Filter Container (NEW) */
+.search-filter-bar {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 14px;
-  color: #6B4E5B;
-}
-
-.filter-tab select,
-.filter-tab input {
-  padding: 8px;
-  border: 1px solid #FFD6DE;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #2D1E2F;
+  gap: 12px;
+  align-items: center;
+  margin-left: 60px;
+  margin-bottom: 30px;
 }
 
 /* Search Bar */
 .search-bar {
-  width: calc(100% - 60px);
-  margin-left: 60px;
+  flex: 1;
   padding: 16px 24px;
   border: 1px solid #FFD6DE;
   border-radius: 16px;
-  margin-bottom: 30px;
   font-size: 15px;
-  transition: all 0.3s ease;
   background: white;
+  transition: all 0.3s ease;
 }
 
 .search-bar:focus {
   outline: none;
   border-color: #FF4B6E;
   box-shadow: 0 0 0 3px rgba(255, 75, 110, 0.1);
+}
+
+/* Expertise Dropdown */
+.search-filter-bar select {
+  padding: 16px 24px;
+  border: 1px solid #FFD6DE;
+  border-radius: 16px;
+  font-size: 15px;
+  background: white;
+  color: #2D1E2F;
+  transition: all 0.3s ease;
 }
 
 /* Table */
@@ -532,7 +571,7 @@ tr:hover {
     padding: 20px;
   }
 
-  h1, .actions, .search-bar, table {
+  h1, .actions, .search-filter-bar, table {
     margin-left: 0;
   }
 
@@ -543,6 +582,12 @@ tr:hover {
   .actions button {
     flex: 1;
     min-width: 120px;
+  }
+
+  .search-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
   }
 
   table {

@@ -41,6 +41,9 @@
           <option>Contacted</option>
         </select>
 
+        <label>Expertise</label>
+        <input v-model="editableContact.expertise" :disabled="!isEditing" />
+
         <div class="buttons">
           <button v-if="isEditing" @click="saveChanges">Apply</button>
           <button v-if="isEditing" @click="cancelChanges">Cancel</button>
@@ -103,6 +106,7 @@ const editableContact = ref({
   occupation: '',
   company: '',
   status: 'Pending',
+  expertise: '',
   notes: [],
   messages: []
 });
@@ -113,7 +117,7 @@ const isEditing = ref(false);
 
 const fetchContact = async () => {
   if (contactId === 'new') {
-    contact.value = {}; // Start with an empty object for new
+    contact.value = {};
     editableContact.value = {
       firstName: '',
       lastName: '',
@@ -125,6 +129,7 @@ const fetchContact = async () => {
       occupation: '',
       company: '',
       status: 'Pending',
+      expertise: '',
       notes: [],
       messages: []
     };
@@ -151,6 +156,9 @@ const fetchContact = async () => {
         occupation: data.Occupation_Status || '',
         company: data.company || '',
         status: data.Status || 'Pending',
+        expertise: data.expertise || '',
+        notes: data.notes || [],
+        messages: data.messages || []
       };
     }
   }
@@ -192,6 +200,7 @@ const saveChanges = async () => {
     Status: contactData.status,
     college: contactData.college,
     company: contactData.company,
+    expertise: contactData.expertise
   };
 
   let response;
@@ -227,6 +236,7 @@ const cancelChanges = () => {
       occupation: contact.value.Occupation_Status || '',
       company: contact.value.company || '',
       status: contact.value.Status || 'Pending',
+      expertise: contact.value.expertise || '',
       notes: contact.value.notes || [],
       messages: contact.value.messages || []
     };
@@ -268,6 +278,7 @@ onMounted(() => {
   fetchContact();
 });
 </script>
+
 
 
 <style scoped>

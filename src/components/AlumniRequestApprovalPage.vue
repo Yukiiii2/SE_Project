@@ -1,6 +1,5 @@
 <template>
   <div class="approval-page">
-    <!-- Sidebar Toggle Button -->
     <button class="menu-btn" @click="toggleSidebar">
       {{ isSidebarOpen ? "✕" : "☰" }}
     </button>
@@ -12,36 +11,17 @@
         <h2>Alumni Connect</h2>
       </div>
       <nav class="nav-links">
-        <router-link to="/home" class="nav-item">
-          <i class="fas fa-home"></i>
-          <span>Home</span>
-        </router-link>
-        <router-link to="/contacts" class="nav-item">
-          <i class="fas fa-cog"></i>
-          <span>Contacts</span>
-        </router-link>
-        <router-link to="/events" class="nav-item">
-          <i class="fas fa-calendar"></i>
-          <span>Events</span>
-        </router-link>
-        <router-link to="/archive" class="nav-item">
-          <i class="fas fa-archive"></i>
-          <span>Archive</span>
-        </router-link>
-        <router-link to="/approve-requests" class="nav-item active">
-          <i class="fas fa-envelope"></i>
-          <span>Requests</span>
-        </router-link>
+        <router-link to="/home" class="nav-item"><i class="fas fa-home"></i><span>Home</span></router-link>
+        <router-link to="/contacts" class="nav-item"><i class="fas fa-cog"></i><span>Contacts</span></router-link>
+        <router-link to="/events" class="nav-item"><i class="fas fa-calendar"></i><span>Events</span></router-link>
+        <router-link to="/archive" class="nav-item"><i class="fas fa-archive"></i><span>Archive</span></router-link>
+        <router-link to="/approve-requests" class="nav-item active"><i class="fas fa-envelope"></i><span>Requests</span></router-link>
       </nav>
-      <a href="#" class="logout" @click.prevent="handleLogout">
-        <i class="fas fa-sign-out-alt"></i>
-        <span>Logout</span>
-      </a>
+      <a href="#" class="logout" @click.prevent="handleLogout"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
     </aside>
 
     <!-- Main Content -->
     <main class="main-content">
-      <!-- Filter Section -->
       <section class="filters">
         <h2>Filter Requests</h2>
         <div class="form-group">
@@ -49,8 +29,7 @@
           <select id="status" v-model="filters.status">
             <option value="">All</option>
             <option value="Pending">Pending</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
+            <option value="Completed">Completed</option>
           </select>
         </div>
         <div class="form-group">
@@ -60,7 +39,6 @@
         <button @click="applyFilters">Apply Filters</button>
       </section>
 
-      <!-- Requests Dashboard -->
       <section class="requests-dashboard">
         <h2>All Requests</h2>
         <table>
@@ -73,122 +51,282 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="request in filteredRequests" :key="request.id" @click="viewRequest(request)">
-              <td>{{ request.title }}</td>
-              <td>{{ request.dateRequested }}</td>
-              <td>{{ request.status }}</td>
+            <tr v-for="request in filteredRequests" :key="request.Request_ID" @click="viewRequest(request)">
+              <td>{{ request.Request_title }}</td>
+              <td>{{ request.Requested_at }}</td>
+              <td>{{ request.Status }}</td>
               <td>{{ request.requester }}</td>
             </tr>
           </tbody>
         </table>
       </section>
 
-      <!-- Individual Request Modal -->
+      <!-- View Modal -->
       <div v-if="selectedRequest" class="modal">
         <div class="modal-content">
           <h2>Request Details</h2>
-          <p><strong>Title:</strong> {{ selectedRequest.title }}</p>
-          <p><strong>Comments:</strong> {{ selectedRequest.comments }}</p>
-          <p><strong>Date Range:</strong> {{ selectedRequest.startDate }} to {{ selectedRequest.endDate }}</p>
-          <p><strong>College:</strong> {{ selectedRequest.college }}</p>
-          <p><strong>Requester:</strong> {{ selectedRequest.requester }}</p>
-          <p><strong>Status:</strong> {{ selectedRequest.status }}</p>
+          <p><strong>Title:</strong> {{ selectedRequest.Request_title }}</p>
+          <p><strong>Tool Needed:</strong> {{ selectedRequest.tool_needed }}</p>
+          <p><strong>Description:</strong> {{ selectedRequest.description }}</p>
+          <p><strong>Technical Requirement:</strong> {{ selectedRequest.technical_requirement }}</p>
+          <p><strong>Priority:</strong> {{ selectedRequest.priority }}</p>
+          <p><strong>Date Needed:</strong> {{ selectedRequest.date_needed }}</p>
+
+          <div class="form-group">
+            <label>Search Candidates</label>
+            <input type="text" v-model="candidateSearch" placeholder="Search by name or expertise" />
+          </div>
+
+          <div
+            v-for="candidate in filteredCandidates"
+            :key="candidate.id"
+            class="form-group"
+          >
+            <input
+              type="checkbox"
+              :value="candidate"
+              v-model="selectedCandidate"
+              @change="confirmSelection(candidate)"
+            />
+            {{ candidate.alumni_Name }} ({{ candidate.expertise || 'No expertise' }})
+            <span
+              v-if="isRecommended(candidate)"
+              style="color: #FF4B7E; font-weight: 500;"
+            >
+              - Recommended
+            </span>
+          </div>
+
+          <button @click="reviewSelection" v-if="selectedCandidate.length === 1">
+            Review
+          </button>
           <button @click="closeModal">Close</button>
+        </div>
+      </div>
+
+      <!-- Review Modal -->
+      <div v-if="showReview" class="modal">
+        <div class="modal-content">
+          <h2>Review and Approve</h2>
+          <p><strong>Request:</strong> {{ selectedRequest.Request_title }}</p>
+          <p><strong>Assigned to:</strong> {{ selectedCandidate[0].alumni_Name }}</p>
+          <p><strong>Expertise:</strong> {{ selectedCandidate[0].expertise }}</p>
+          <button @click="approveRequest">Approve</button>
+          <button @click="showReview = false">Cancel</button>
         </div>
       </div>
     </main>
   </div>
 </template>
 
-<script>
-export default {
-  data() {
-    return {
-      isSidebarOpen: false,
-      filters: {
-        status: '',
-        dateRequested: ''
-      },
-      requests: [
-        // Sample data, this should be fetched from an API or database
-        { id: 1, title: 'Request 1', dateRequested: '2025-03-01', status: 'Pending', requester: 'John Doe', comments: 'Need this ASAP', startDate: '2025-03-05', endDate: '2025-03-10', college: 'College of Engineering' },
-        { id: 2, title: 'Request 2', dateRequested: '2025-03-02', status: 'Approved', requester: 'Jane Smith', comments: 'For research purposes', startDate: '2025-03-15', endDate: '2025-03-20', college: 'College of Arts and Sciences' }
-      ],
-      filteredRequests: [],
-      selectedRequest: null
-    };
-  },
-  created() {
-    this.filteredRequests = this.requests;
-  },
-  methods: {
-    toggleSidebar() {
-      this.isSidebarOpen = !this.isSidebarOpen;
-    },
-    handleLogout() {
-      localStorage.removeItem('user');
-      this.$router.push('/');
-    },
-    applyFilters() {
-      this.filteredRequests = this.requests.filter(request => {
-        const matchesStatus = this.filters.status ? request.status === this.filters.status : true;
-        const matchesDate = this.filters.dateRequested ? request.dateRequested === this.filters.dateRequested : true;
-        return matchesStatus && matchesDate;
-      });
-    },
-    viewRequest(request) {
-      this.selectedRequest = request;
-    },
-    closeModal() {
-      this.selectedRequest = null;
-    }
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { supabase } from '../lib/supabaseClient'
+
+const router = useRouter()
+const isSidebarOpen = ref(false)
+
+const filters = ref({ status: '', dateRequested: '' })
+const requests = ref([])
+const filteredRequests = ref([])
+const candidates = ref([])
+const selectedRequest = ref(null)
+const selectedCandidate = ref([])
+const candidateSearch = ref('')
+const showReview = ref(false)
+
+const toggleSidebar = () => {
+  isSidebarOpen.value = !isSidebarOpen.value
+}
+
+const handleLogout = () => {
+  localStorage.removeItem('user')
+  router.push('/')
+}
+
+const applyFilters = () => {
+  filteredRequests.value = requests.value.filter(r => {
+    const statusMatch = filters.value.status ? r.Status === filters.value.status : true
+    const dateMatch = filters.value.dateRequested ? r.Requested_at === filters.value.dateRequested : true
+    return statusMatch && dateMatch
+  })
+}
+
+const viewRequest = (req) => {
+  selectedRequest.value = req
+  selectedCandidate.value = []
+  showReview.value = false
+}
+
+const confirmSelection = (candidate) => {
+  if (selectedCandidate.value.length > 1) {
+    alert('Only one candidate can be selected')
+    selectedCandidate.value = [candidate]
   }
-};
+}
+
+const reviewSelection = () => {
+  showReview.value = true
+}
+
+const closeModal = () => {
+  selectedRequest.value = null
+}
+
+const approveRequest = async () => {
+  const request = selectedRequest.value
+  const assigned = selectedCandidate.value[0]
+
+  if (!request || !assigned) return
+
+  const { error } = await supabase.from('request_table').update({
+    Status: 'Completed',
+    approved_at: new Date().toISOString(),
+    assigned_to: assigned.id // assuming id or uuid
+  }).eq('Request_ID', request.Request_ID)
+
+  if (error) {
+    console.error('Failed to update request:', error)
+  } else {
+    request.Status = 'Completed'
+    request.approved_at = new Date().toISOString()
+    request.assigned_to = assigned.id
+    selectedRequest.value = null
+    showReview.value = false
+    await fetchRequests()
+  }
+}
+
+const fetchRequests = async () => {
+  const { data, error } = await supabase.from('request_table').select('*')
+
+  if (error) {
+    console.error('Error fetching requests:', error)
+    return
+  }
+
+  if (!data || data.length === 0) {
+    const dummyRequests = [
+      {
+        Request_ID: 9991,
+        Requested_at: '2025-04-10',
+        Status: 'Pending',
+        Request_title: 'Install New Software',
+        description: 'We need new design tools for the team.',
+        tool_needed: 'Figma Pro',
+        technical_requirement: 'UI/UX, Web Design',
+        priority: 'High',
+        date_needed: '2025-04-20',
+        requester: 'Mico Ang'
+      },
+      {
+        Request_ID: 9992,
+        Requested_at: '2025-04-11',
+        Status: 'Pending',
+        Request_title: 'Setup Cloud Infrastructure',
+        description: 'Deploy services on scalable cloud environment.',
+        tool_needed: 'AWS EC2, S3',
+        technical_requirement: 'DevOps, AWS',
+        priority: 'Medium',
+        date_needed: '2025-04-25',
+        requester: 'Jane Cruz'
+      },
+      {
+        Request_ID: 9993,
+        Requested_at: '2025-04-12',
+        Status: 'Pending',
+        Request_title: 'Data Analysis Support',
+        description: 'Assistance needed in processing survey datasets.',
+        tool_needed: 'Python, Pandas',
+        technical_requirement: 'Data Science, Python',
+        priority: 'Low',
+        date_needed: '2025-05-01',
+        requester: 'Carlos Reyes'
+      }
+    ]
+
+    const { error: insertError } = await supabase.from('request_table').insert(dummyRequests)
+    if (insertError) {
+      console.error('Failed to insert dummy requests:', insertError)
+      return
+    }
+
+    requests.value = dummyRequests
+    filteredRequests.value = dummyRequests
+  } else {
+    requests.value = data
+    filteredRequests.value = data
+  }
+}
+
+const fetchCandidates = async () => {
+  const { data, error } = await supabase.from('alumni_table').select('*')
+  if (error) {
+    console.error('Error fetching candidates:', error)
+  } else {
+    candidates.value = data
+  }
+}
+
+const filteredCandidates = computed(() => {
+  const keyword = candidateSearch.value.toLowerCase()
+  return candidates.value.filter(c =>
+    c.alumni_Name?.toLowerCase().includes(keyword) ||
+    c.expertise?.toLowerCase().includes(keyword)
+  )
+})
+
+const isRecommended = (candidate) => {
+  if (!selectedRequest.value || !candidate.expertise) return false
+  const requirements = selectedRequest.value.technical_requirement.toLowerCase().split(',').map(r => r.trim())
+  const candidateExpertise = candidate.expertise.toLowerCase().split(',').map(e => e.trim())
+  return requirements.some(req => candidateExpertise.includes(req))
+}
+
+onMounted(async () => {
+  await fetchRequests()
+  await fetchCandidates()
+})
 </script>
 
-<style scoped>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
 
-body, html {
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-  width: 100%;
-}
+
+
+
+
+<style scoped>
 
 .approval-page {
   display: flex;
   min-height: 100vh;
   background-color: #fff5f7;
   font-family: 'Inter', sans-serif;
+  overflow: hidden;
+  width: 100%;
+  position: relative;
+  margin: 0;
+  padding: 0;
 }
 
 /* Sidebar Styles */
 .sidebar {
-  width: 250px;
-  height: 100vh;
-  background: linear-gradient(180deg, #ff4b7c 0%, #ff1c55 100%);
-  color: white;
   position: fixed;
+  left: 0;
   top: 0;
-  left: -250px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 30px rgba(255, 75, 110, 0.15);
-  z-index: 1000;
+  bottom: 0;
+  width: 280px;
+  background: linear-gradient(180deg, #ff4b7c 0%, #ff1c55 100%);
   padding: 30px;
+  color: white;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  z-index: 100;
+  margin: 0;
 }
 
-.sidebar.open {
-  left: 0;
-}
-
-/* Sidebar Header */
 .logo {
   display: flex;
   align-items: center;
@@ -208,7 +346,6 @@ body, html {
   color: white;
 }
 
-/* Sidebar Navigation */
 .nav-links {
   display: flex;
   flex-direction: column;
@@ -231,75 +368,35 @@ body, html {
   color: white;
 }
 
-/* Logout Button */
-.logout {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: #ffffff;
-  background-color: rgba(255, 255, 255, 0.1);
-  text-decoration: none;
-  padding: 14px;
-  border-radius: 16px;
-  margin-top: auto;
-  transition: all 0.3s ease;
-  font-weight: 500;
-}
-
-.logout:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
-}
-
-/* Sidebar Toggle Button */
-.menu-btn {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  z-index: 1001;
-  background: #ff4b7c;
-  color: white;
-  border: none;
-  padding: 12px;
-  border-radius: 16px;
-  cursor: pointer;
-  width: 48px;
-  height: 48px;
-  font-size: 20px;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(255, 75, 110, 0.2);
-}
-
-.menu-btn:hover {
-  background: #ff1c55;
-  transform: translateY(-2px);
-}
-
-/* Main Content Styles */
 .main-content {
   flex: 1;
-  margin-left: 250px;
-  padding: 40px;
-  transition: all 0.3s ease;
+  margin-left: 280px;
+  padding: 30px;
   overflow-y: auto;
   min-width: 0;
-  width: calc(100% - 250px);
+  width: calc(100% - 280px);
 }
 
-/* Filter Section */
+/* Filters Section */
 .filters {
   background: white;
-  padding: 20px;
+  padding: 24px;
   border-radius: 20px;
   box-shadow: 0 4px 20px rgba(255, 75, 124, 0.1);
   margin-bottom: 24px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.filters:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(255, 75, 124, 0.15);
 }
 
 .filters h2 {
-  color: #ff1c55;
-  font-size: 24px;
+  color: #ff4b7c;
+  font-size: 18px;
   font-weight: 600;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .form-group {
@@ -308,21 +405,105 @@ body, html {
 
 .form-group label {
   display: block;
-  color: #ff1c55;
-  font-size: 14px;
+  color: #000;
   margin-bottom: 8px;
+  font-weight: 500;
 }
 
-.form-group select,
-.form-group input {
+select, input[type="date"] {
   width: 100%;
   padding: 12px;
-  border: 1px solid #ffb3c7;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #ff1c55;
+  border: 1px solid #ffe0e5;
+  border-radius: 12px;
+  background: white;
+  color: #000;
+  transition: all 0.3s ease;
 }
 
+select:focus, input:focus {
+  outline: none;
+  border-color: #ff4b7c;
+  box-shadow: 0 0 0 3px rgba(255, 75, 124, 0.1);
+}
+
+/* Requests Dashboard */
+.requests-dashboard {
+  background: white;
+  padding: 24px;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(255, 75, 124, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.requests-dashboard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(255, 75, 124, 0.15);
+}
+
+.requests-dashboard h2 {
+  color: #ff4b7c;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+table {
+  width: 100%;
+  border-spacing: 0;
+  border-collapse: separate;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+th {
+  background: #fff5f7;
+  color: #ff4b7c;
+  font-weight: 600;
+  padding: 16px;
+  text-align: left;
+}
+
+td {
+  padding: 16px;
+  color: #000;
+  border-bottom: 1px solid #ffe0e5;
+}
+
+tr:hover {
+  background: #fff5f7;
+  cursor: pointer;
+}
+
+/* Modal Styles */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 32px;
+  border-radius: 20px;
+  width: 500px;
+  max-width: 90%;
+  box-shadow: 0 20px 25px -5px rgba(255, 75, 124, 0.1);
+}
+
+.modal-content h2 {
+  color: #ff4b7c;
+  font-size: 20px;
+  margin-bottom: 24px;
+}
+
+/* Button Styles */
 button {
   background: #ff4b7c;
   color: white;
@@ -336,93 +517,72 @@ button {
 
 button:hover {
   background: #ff1c55;
+  transform: translateY(-2px);
 }
 
-/* Requests Dashboard */
-.requests-dashboard {
-  background: white;
-  padding: 20px;
+button.secondary {
+  background: transparent;
+  color: #ff4b7c;
+  border: 1px solid #ff4b7c;
+}
+
+button.secondary:hover {
+  background: #fff5f7;
+}
+
+/* Status Badge Styles */
+.status-badge {
+  display: inline-block;
+  padding: 6px 12px;
   border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(255, 75, 124, 0.1);
+  font-size: 14px;
+  font-weight: 500;
 }
 
-.requests-dashboard h2 {
-  color: #ff1c55;
-  font-size: 24px;
-  font-weight: 600;
-  margin-bottom: 16px;
+.status-badge.pending {
+  background: #fff5f7;
+  color: #ff4b7c;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th, td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid #ffb3c7;
-}
-
-th {
-  background-color: #fff5f7;
-  color: #ff1c55;
-  font-weight: 600;
-}
-
-td {
-  color: #6b4e5b;
-}
-
-tr:hover {
-  background-color: #fff5f7;
-  cursor: pointer;
-}
-
-/* Modal Styles */
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-content {
-  background: white;
-  padding: 20px;
-  border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  width: 90%;
-  max-width: 500px;
-}
-
-.modal-content h2 {
-  color: #ff1c55;
-  font-size: 24px;
-  font-weight: 600;
-  margin-bottom: 16px;
-}
-
-.modal-content p {
-  color: #6b4e5b;
-  margin-bottom: 8px;
-}
-
-.modal-content button {
-  margin-top: 16px;
+.status-badge.completed {
+  background: #f0fdf4;
+  color: #15803d;
 }
 
 /* Responsive Styles */
 @media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    position: sticky;
+    top: 0;
+    height: auto;
+    padding: 15px;
+    flex-direction: row;
+  }
+
   .main-content {
     margin-left: 0;
     width: 100%;
+  }
+
+  .modal-content {
+    width: 95%;
     padding: 20px;
   }
+}
+
+/* Modern scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #ffe0e5;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ff4b7c;
+  border-radius: 4px;
 }
 </style>

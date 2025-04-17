@@ -7,7 +7,6 @@ import LoginPage from "../components/LoginPage.vue";
 import ForgotPassword from "../components/ForgotPassword.vue";
 import ResetPassword from "../components/ResetPassword.vue";
 import ArchiveManagement from "../components/ArchiveManagement.vue";
-import RequestPage from "../components/RequestPage.vue";
 import AlumniRequestApprovalPage from "../components/AlumniRequestApprovalPage.vue";
 import RegisterPage from '../components/RegisterPage.vue';
 
@@ -21,7 +20,6 @@ const routes = [
   { path: "/forgot-password", name: "ForgotPassword", component: ForgotPassword },
   { path: "/reset-password", name: "ResetPassword", component: ResetPassword },
   { path: "/archive", name: "ArchiveManagement", component: ArchiveManagement },
-  { path: "/requests", name: "Requests", component: RequestPage },
   { path: "/approve-requests", name: "ApproveRequests", component: AlumniRequestApprovalPage },
   { path: '/register', name: 'Register', component: RegisterPage },
   { path: "/:pathMatch(.*)*", redirect: "/" }

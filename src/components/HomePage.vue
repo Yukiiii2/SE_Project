@@ -7,107 +7,249 @@
         <h2>Alumni Connect</h2>
       </div>
       <nav class="nav-links">
-        <router-link to="/home" class="nav-item active">
-          <i class="fas fa-home"></i>
-          <span>Home</span>
-        </router-link>
-        <router-link to="/contacts" class="nav-item">
-          <i class="fas fa-cog"></i>
-          <span>Contacts</span>
-        </router-link>
-        <router-link to="/events" class="nav-item">
-          <i class="fas fa-calendar"></i>
-          <span>Events</span>
-        </router-link>
-        <router-link to="/archive" class="nav-item">
-          <i class="fas fa-archive"></i>
-          <span>Archive</span>
-        </router-link>
-        <router-link to="/approve-requests" class="nav-item">
-          <i class="fas fa-envelope"></i>
-          <span>Requests</span>
-        </router-link>
+        <router-link to="/home" class="nav-item active"><i class="fas fa-home"></i><span>Home</span></router-link>
+        <router-link to="/contacts" class="nav-item"><i class="fas fa-cog"></i><span>Contacts</span></router-link>
+        <router-link to="/events" class="nav-item"><i class="fas fa-calendar"></i><span>Events</span></router-link>
+        <router-link to="/archive" class="nav-item"><i class="fas fa-archive"></i><span>Archive</span></router-link>
+        <router-link to="/approve-requests" class="nav-item"><i class="fas fa-envelope"></i><span>Requests</span></router-link>
       </nav>
-      <a href="#" class="logout" @click.prevent="handleLogout">
-        <i class="fas fa-sign-out-alt"></i>
-        <span>Logout</span>
-      </a>
+      <a href="#" class="logout" @click.prevent="handleLogout"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
     </aside>
 
     <!-- Main Content -->
     <main class="main-content">
-      <!-- Stats Cards Section -->
+      <!-- Stats Cards -->
       <section class="stats-cards">
         <div class="card">
-          <div class="card-icon pink">
-            <i class="fas fa-users"></i>
-          </div>
+          <div class="card-icon pink"><i class="fas fa-users"></i></div>
           <h3>Total Alumni</h3>
-          <p>2,119</p>
+          <p>{{ totalAlumni }}</p>
           <button class="card-button">View All</button>
         </div>
         <div class="card">
-          <div class="card-icon green">
-            <i class="fas fa-check-circle"></i>
-          </div>
+          <div class="card-icon green"><i class="fas fa-check-circle"></i></div>
           <h3>Active Members</h3>
-          <p>1,892</p>
+          <p>{{ activeMembers }}</p>
           <button class="card-button">Details</button>
         </div>
         <div class="card">
-          <div class="card-icon purple">
-            <i class="fas fa-calendar-check"></i>
-          </div>
+          <div class="card-icon purple"><i class="fas fa-calendar-check"></i></div>
           <h3>Events Held</h3>
-          <p>42</p>
+          <p>{{ eventsHeld }}</p>
           <button class="card-button">View Events</button>
         </div>
       </section>
 
-      <!-- Charts Section -->
+      <!-- Charts -->
       <section class="charts">
+        <!-- Bar Chart -->
         <div class="chart-container">
           <div class="chart-header">
-            <h3>Alumni Distribution</h3>
+            <h3>Contact Growth</h3>
             <div class="chart-actions">
-              <span class="date-range">Last 6 months</span>
-              <button class="more-btn"><i class="fas fa-ellipsis-v"></i></button>
+              <button :class="{ active: selectedPeriod === 'weekly' }" @click="updatePeriod('weekly')">Weekly</button>
+              <button :class="{ active: selectedPeriod === 'monthly' }" @click="updatePeriod('monthly')">Monthly</button>
+              <button :class="{ active: selectedPeriod === 'yearly' }" @click="updatePeriod('yearly')">Yearly</button>
             </div>
           </div>
-          <BarChart />
+          <canvas ref="barChart"></canvas>
+          <div class="counts">
+            <div>Total Alumni: {{ totalAlumni }}</div>
+            <div>{{ activeMembers }}</div>
+          </div>
         </div>
+
+        <!-- Pie Chart -->
         <div class="chart-container">
-          <div class="chart-header">
-            <h3>Member Status</h3>
-            <div class="chart-actions">
-              <span class="date-range">Current Year</span>
-              <button class="more-btn"><i class="fas fa-ellipsis-v"></i></button>
+          <div class="chart-header"><h3>Member Status</h3></div>
+          <canvas ref="pieChart"></canvas>
+          <div class="legend-container">
+            <div class="legend-item">
+              <span class="legend-dot" style="background-color:#FF5C8E"></span>
+              <span class="legend-label">Active Members</span>
+              <span class="legend-value">{{ pieChartData.active }}</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background-color:#FF8FBB"></span>
+              <span class="legend-label">Inactive Members</span>
+              <span class="legend-value">{{ pieChartData.inactive }}</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background-color:#FFD1DC"></span>
+              <span class="legend-label">New Members</span>
+              <span class="legend-value">{{ pieChartData.new }}</span>
             </div>
           </div>
-          <PieChart />
         </div>
       </section>
     </main>
   </div>
 </template>
 
-<script>
-import BarChart from './BarChart.vue'
-import PieChart from './PieChart.vue'
+<script setup>
+import { ref, shallowRef, onMounted } from 'vue'
+import { supabase } from '../lib/supabaseClient'
+import { Chart, Title, Tooltip, Legend, CategoryScale, LinearScale, BarElement, ArcElement, PieController, BarController } from 'chart.js'
+import cloneDeep from 'lodash/cloneDeep'
+import { debounce } from 'lodash'
 
-export default {
-  name: 'HomePage',
-  components: {
-    BarChart,
-    PieChart
-  },
-  methods: {
-    handleLogout() {
-      localStorage.removeItem('user');
-      this.$router.push('/');
+Chart.register(Title, Tooltip, Legend, CategoryScale, LinearScale, BarElement, ArcElement, BarController, PieController)
+
+// State
+const totalAlumni = ref(0)
+const activeMembers = ref(0)
+const eventsHeld = ref(0)
+const selectedPeriod = ref('monthly')
+const barChart = ref(null)
+const pieChart = ref(null)
+const chart = shallowRef(null)
+let pieChartInstance = null
+
+const pieChartData = ref({ active: 0, inactive: 0, new: 0 })
+
+const fetchCounts = async () => {
+  const { data: totalData } = await supabase.from('alumni_table').select('*')
+  totalAlumni.value = totalData.length
+
+  const { data: activeData } = await supabase.from('alumni_table').select('*').eq('Status', 'Contacted')
+  activeMembers.value = activeData.length
+
+  const { data: eventsData } = await supabase.from('events').select('*')
+  eventsHeld.value = eventsData.length
+}
+
+const fetchPieData = async () => {
+  const { data } = await supabase.from('alumni_table').select('Status, created_at')
+  const now = new Date()
+  const last30Days = new Date()
+  last30Days.setDate(now.getDate() - 30)
+
+  pieChartData.value.active = data.filter(d => d.Status === 'Contacted').length
+  pieChartData.value.inactive = data.filter(d => d.Status !== 'Contacted').length
+  pieChartData.value.new = data.filter(d => new Date(d.created_at) >= last30Days).length
+
+  setupPieChart()
+}
+
+const setupPieChart = () => {
+  const ctx = pieChart.value?.getContext('2d')
+  if (!ctx) return
+
+  if (pieChartInstance) pieChartInstance.destroy()
+
+  pieChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ["Active Members", "Inactive Members", "New Members"],
+      datasets: [{
+        data: [
+          pieChartData.value.active,
+          pieChartData.value.inactive,
+          pieChartData.value.new
+        ],
+        backgroundColor: ['#FF5C8E', '#FF8FBB', '#FFD1DC'],
+        cutout: '75%',
+        borderRadius: 20
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } }
     }
+  })
+}
+
+const fetchData = async (period) => {
+  const now = new Date()
+  let start = new Date()
+  if (period === 'weekly') start.setDate(now.getDate() - 35)
+  else if (period === 'monthly') start.setMonth(now.getMonth() - 5)
+  else start = new Date(now.getFullYear(), 0, 1)
+
+  const { data } = await supabase
+    .from('alumni_table')
+    .select('Status, created_at')
+    .gte('created_at', start.toISOString())
+
+  const totalData = [], activeData = [], labels = []
+
+  if (period === 'weekly') {
+    for (let i = 4; i >= 0; i--) {
+      const weekStart = new Date()
+      weekStart.setDate(now.getDate() - (i * 7))
+      const weekEnd = new Date(weekStart)
+      weekEnd.setDate(weekStart.getDate() + 6)
+
+      labels.push(`W${5 - i}`)
+      const filtered = data.filter(d => {
+        const date = new Date(d.created_at)
+        return date >= weekStart && date <= weekEnd
+      })
+      totalData.push(filtered.length)
+      activeData.push(filtered.filter(d => d.Status === 'Contacted').length)
+    }
+  } else if (period === 'monthly') {
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date()
+      d.setMonth(now.getMonth() - i)
+      const m = d.getMonth(), y = d.getFullYear()
+      labels.push(d.toLocaleString('default', { month: 'short' }))
+      const filtered = data.filter(e => {
+        const date = new Date(e.created_at)
+        return date.getMonth() === m && date.getFullYear() === y
+      })
+      totalData.push(filtered.length)
+      activeData.push(filtered.filter(e => e.Status === 'Contacted').length)
+    }
+  } else {
+    labels.push('This Year')
+    totalData.push(data.length)
+    activeData.push(data.filter(d => d.Status === 'Contacted').length)
+  }
+
+  return {
+    labels,
+    datasets: [
+      { label: 'Total Alumni', data: totalData, backgroundColor: '#FF5C8E' },
+      { label: 'Active Members', data: activeData, backgroundColor: '#FF8FBB' }
+    ]
   }
 }
+
+const updatePeriod = debounce(async (period) => {
+  selectedPeriod.value = period
+  const rawData = await fetchData(period)
+  chart.value.data = cloneDeep(rawData)
+  chart.value.update()
+}, 500)
+
+const setupBarChart = async () => {
+  const rawData = await fetchData(selectedPeriod.value)
+  const ctx = barChart.value?.getContext('2d')
+  if (!ctx) return
+  chart.value = new Chart(ctx, {
+    type: 'bar',
+    data: cloneDeep(rawData),
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'top' } },
+      scales: { y: { beginAtZero: true } }
+    }
+  })
+}
+
+const handleLogout = () => {
+  localStorage.removeItem('user')
+  window.location.href = '/'
+}
+
+onMounted(async () => {
+  await fetchCounts()
+  await fetchPieData()
+  await setupBarChart()
+})
 </script>
 
 <style scoped>
@@ -132,11 +274,9 @@ body, html {
   overflow: hidden;
   width: 100%;
   position: relative;
-  margin: 0;
-  padding: 0;
 }
 
-/* Sidebar Styles */
+/* === SIDEBAR === */
 .sidebar {
   position: fixed;
   left: 0;
@@ -150,7 +290,6 @@ body, html {
   flex-direction: column;
   justify-content: space-between;
   z-index: 100;
-  margin: 0;
 }
 
 .logo {
@@ -211,7 +350,7 @@ body, html {
   background: #ff4b7c;
 }
 
-/* Main Content Styles */
+/* === MAIN CONTENT === */
 .main-content {
   flex: 1;
   margin-left: 280px;
@@ -221,7 +360,7 @@ body, html {
   width: calc(100% - 280px);
 }
 
-/* Stats Cards Section */
+/* === STATS CARDS === */
 .stats-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -297,74 +436,129 @@ body, html {
   transform: translateY(-2px);
 }
 
-/* Charts Section */
+/* === CHART SECTION === */
 .charts {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 24px;
+  width: 100%;
 }
 
 .chart-container {
+  flex: 1 1 48%;
   background: white;
   padding: 24px;
   border-radius: 20px;
   box-shadow: 0 4px 20px rgba(255, 75, 124, 0.1);
-  min-height: 300px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.chart-container:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(255, 75, 124, 0.15);
+  transition: transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: start;
+  overflow: hidden;
+  height: 420px;
+  max-width: 100%;
+  min-width: 450px;
 }
 
 .chart-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  width: 100%;
+  margin-bottom: 16px;
 }
 
 .chart-header h3 {
-  color: #000;
   font-size: 18px;
   font-weight: 600;
+  color: #000;
 }
 
 .chart-actions {
   display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.date-range {
-  color: #000; /* Updated to black */
-  font-size: 14px;
-}
-
-.more-btn {
-  background: transparent;
-  border: none;
-  color: #ffb3c7;
-  cursor: pointer;
-  padding: 4px 8px;
+  gap: 8px;
+  background: #f4f7fe;
+  padding: 4px;
   border-radius: 8px;
-  transition: all 0.3s ease;
 }
 
-.more-btn:hover {
-  background: #ffe0e5;
-  color: #ff1c55;
+.chart-actions button {
+  border: none;
+  background: none;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #a3aed0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-/* Responsive Styles */
+.chart-actions button.active {
+  background: #ff5c8e;
+  color: white;
+}
+
+.chart-actions button:hover:not(.active) {
+  color: #2b3674;
+}
+
+canvas {
+  width: 100% !important;
+  max-height: 250px !important;
+  object-fit: contain;
+  margin: 0 auto;
+}
+
+/* === LEGEND BELOW PIECHART === */
+.legend-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+  width: 100%;
+  max-width: 300px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  padding: 0 10px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.legend-label {
+  flex: 1;
+  color: #000;
+}
+
+.legend-value {
+  font-weight: bold;
+  color: #000;
+}
+
+/* === RESPONSIVE === */
 @media (max-width: 1200px) {
+  .charts {
+    flex-direction: column;
+  }
+
+  .chart-container {
+    width: 100%;
+    min-width: unset;
+  }
+
   .stats-cards {
     grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .charts {
-    grid-template-columns: 1fr;
   }
 }
 
@@ -393,21 +587,13 @@ body, html {
     display: none;
   }
 
-  .nav-item span, 
-  .logout span {
+  .nav-item span, .logout span {
     display: none;
   }
 
-  .nav-item, 
-  .logout {
+  .nav-item, .logout {
     justify-content: center;
     padding: 8px;
-  }
-
-  .nav-item i, 
-  .logout i {
-    font-size: 20px;
-    margin: 0;
   }
 
   .main-content {
@@ -419,6 +605,11 @@ body, html {
   .stats-cards {
     grid-template-columns: 1fr;
   }
+
+  .chart-container {
+    padding: 15px;
+    min-height: 250px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -428,7 +619,6 @@ body, html {
 
   .chart-container {
     padding: 15px;
-    min-height: 250px;
   }
 }
 
@@ -460,7 +650,7 @@ body, html {
   }
 }
 
-/* Modern scrollbar */
+/* === SCROLLBAR === */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -475,3 +665,5 @@ body, html {
   border-radius: 4px;
 }
 </style>
+
+
