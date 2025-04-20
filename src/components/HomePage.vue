@@ -344,7 +344,7 @@ const openEventList = async () => {
     left: 0;
     top: 0;
     bottom: 0;
-    width: 280px;
+    width: 250px;
     background: linear-gradient(180deg, #ff4b7c 0%, #ff1c55 100%);
     padding: 30px;
     color: white;
@@ -353,12 +353,23 @@ const openEventList = async () => {
     justify-content: space-between;
     z-index: 100;
   }
+  .sidebar.open {
+  left: 0;
+}
+
+/* Sidebar Header */
+.sidebar-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 40px;
+}
 
   .logo {
     display: flex;
     align-items: center;
     gap: 15px;
-    margin-bottom: 40px;
+    margin-top: 80px;
   }
 
   .logo img {
@@ -376,16 +387,18 @@ const openEventList = async () => {
   .nav-links {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 10px;
+    margin: 20px 0;
   }
+
 
   .nav-item {
     display: flex;
     align-items: center;
     gap: 12px;
     color: #ffb3c7;
-    padding: 12px;
-    border-radius: 14px;
+    padding: 14px;
+    border-radius: 16px;
     text-decoration: none;
     transition: all 0.3s ease;
   }
@@ -393,6 +406,7 @@ const openEventList = async () => {
   .nav-item:hover, .nav-item.active {
     background: rgba(255, 255, 255, 0.2);
     color: white;
+    transform: translateX(5px);
   }
 
   .logout {
@@ -416,7 +430,7 @@ const openEventList = async () => {
   .main-content {
     flex: 1;
     margin-left: 280px;
-    padding: 30px;
+    padding: 40px;
     overflow-y: auto;
     min-width: 0;
     width: calc(100% - 280px);

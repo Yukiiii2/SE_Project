@@ -1,5 +1,6 @@
 <template>
   <div class="contact-management">
+    <!-- Sidebar -->
     <button class="menu-btn" @click="toggleSidebar">☰</button>
     <div :class="['sidebar', { open: isSidebarOpen }]">
       <div class="sidebar-header">
@@ -27,14 +28,45 @@
         <input type="file" ref="fileInput" @change="importCSV" style="display: none;" />
       </div>
 
+      <!-- Search and Click-to-Toggle Filters -->
       <div style="display: flex; gap: 10px; margin-bottom: 30px; margin-left: 60px; align-items: center;">
         <input type="text" class="search-bar" v-model="searchTerm" placeholder="Search contacts..." />
-        <select v-model="expertiseFilter" style="padding: 14px; border: 1px solid #FFD6DE; border-radius: 16px; background: white; font-size: 15px;">
-          <option value="">All Expertise</option>
-          <option v-for="tag in expertiseOptions" :key="tag.id" :value="tag.name">{{ tag.name }}</option>
-        </select>
+
+        <!-- Click-to-Toggle Filter Dropdown -->
+        <div class="click-toggle-filter">
+          <button @click="toggleFilterMenu" class="filter-toggle">Filter by</button>
+
+          <div v-if="filterMenuOpen" class="filter-menu">
+            <div class="filter-item" @mouseenter="handleSubmenuPosition('Status')">
+              Status
+              <div v-if="showSubmenu === 'Status'" class="submenu" :class="{ 'left-side': submenuDirection === 'left' }">
+                <div class="submenu-item" @click="applyFilter('Status', 'Pending')">Pending</div>
+                <div class="submenu-item" @click="applyFilter('Status', 'Contacted')">Contacted</div>
+              </div>
+            </div>
+
+            <div class="filter-item" @mouseenter="handleSubmenuPosition('Expertise')">
+              Expertise
+              <div v-if="showSubmenu === 'Expertise'" class="submenu" :class="{ 'left-side': submenuDirection === 'left' }">
+                <div
+                  class="submenu-item"
+                  v-for="tag in expertiseOptions"
+                  :key="tag.id"
+                  @click="applyFilter('Expertise', tag.name)"
+                >
+                  {{ tag.name }}
+                </div>
+              </div>
+            </div>
+
+            <div class="filter-item" @click="applyFilter('Year_Graduated', '')">Date Graduated</div>
+            <div class="filter-item" @click="applyFilter('Occupation_Status', '')">Occupation</div>
+            <div class="filter-item" @click="applyFilter('company', '')">Company</div>
+          </div>
+        </div>
       </div>
 
+      <!-- Table -->
       <table>
         <thead>
           <tr>
@@ -78,6 +110,7 @@
         </tbody>
       </table>
 
+      <!-- Pagination -->
       <div class="pagination">
         <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1">Previous</button>
         <span>Page {{ currentPage }} of {{ totalPages }}</span>
@@ -88,183 +121,215 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import Papa from 'papaparse';
-import { supabase } from '../lib/supabaseClient';
+import { ref, computed, onMounted, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
+import Papa from 'papaparse'
+import { supabase } from '../lib/supabaseClient'
 
-const router = useRouter();
-const contacts = ref([]);
-const searchTerm = ref('');
-const expertiseFilter = ref('');
-const expertiseOptions = ref([]);
-const selectedContacts = ref([]);
-const currentPage = ref(1);
-const pageSize = ref(10);
-const isSidebarOpen = ref(false);
-const fileInput = ref(null);
+const router = useRouter()
+const contacts = ref([])
+const searchTerm = ref('')
+const selectedContacts = ref([])
+const currentPage = ref(1)
+const pageSize = ref(10)
+const isSidebarOpen = ref(false)
+
+const toggleSidebar = () => {
+  isSidebarOpen.value = !isSidebarOpen.value
+}
+
+const expertiseOptions = ref([])
+const filterCategory = ref('')
+const filterValue = ref('')
+const filterMenuOpen = ref(false)
+const showSubmenu = ref(null)
+const submenuDirection = ref('right')
+
+const toggleFilterMenu = () => {
+  filterMenuOpen.value = !filterMenuOpen.value
+  showSubmenu.value = null
+}
+
+const handleSubmenuPosition = async (key) => {
+  showSubmenu.value = key
+  await nextTick()
+  const submenuEl = document.querySelector('.filter-item .submenu')
+  if (!submenuEl) return
+  const rect = submenuEl.getBoundingClientRect()
+  const overflowRight = rect.right > window.innerWidth
+  submenuDirection.value = overflowRight ? 'left' : 'right'
+}
+
+const applyFilter = (category, value) => {
+  filterCategory.value = category
+  filterValue.value = value
+  filterMenuOpen.value = false
+  showSubmenu.value = null
+  currentPage.value = 1
+}
+
 
 const filteredContacts = computed(() => {
-  const search = searchTerm.value.toLowerCase();
+  const search = searchTerm.value.toLowerCase()
 
   return contacts.value.filter(contact => {
-    const matchesSearch = Object.values(contact).some(val =>
-      typeof val === 'string' && val.toLowerCase().includes(search)
-    );
+    const searchable = [
+  contact.alumni_ID,
+  contact.alumni_Name,
+  contact.Email,
+  contact.Phone_Number,
+  contact.Year_Graduated,
+  contact.Occupation_Status,
+  contact.Program,
+  contact.College,
+  contact.Company
+]
 
-    const matchesExpertise =
-      !expertiseFilter.value ||
-      contact.expertise_tags?.some(tag =>
-        tag.name.toLowerCase() === expertiseFilter.value.toLowerCase()
-      );
+    const matchesSearch = searchable.some(val =>
+      val !== null && val !== undefined && String(val).toLowerCase().includes(search)
+    )
 
-    return matchesSearch && matchesExpertise;
-  });
-});
+    let matchesFilter = true
 
-const totalPages = computed(() => Math.ceil(filteredContacts.value.length / pageSize.value));
+    if (filterCategory.value === 'Expertise') {
+      matchesFilter =
+        !filterValue.value ||
+        (contact.expertise && contact.expertise.includes(filterValue.value))
+    } else if (filterCategory.value && filterValue.value) {
+      matchesFilter = contact[filterCategory.value]?.toString() === filterValue.value
+    }
+
+    return matchesSearch && matchesFilter
+  })
+})
+
 
 const paginatedContacts = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  return filteredContacts.value.slice(start, start + pageSize.value);
-});
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredContacts.value.slice(start, start + pageSize.value)
+})
 
-const toggleSidebar = () => { isSidebarOpen.value = !isSidebarOpen.value; };
-
-const handleLogout = () => {
-  localStorage.removeItem('user');
-  router.push('/');
-};
-
-const handleNewContact = () => {
-  router.push({ name: 'ContactDetail', params: { id: 'new' } });
-};
+const goToPage = (page) => {
+  if (page >= 1 && page <= Math.ceil(filteredContacts.value.length / pageSize.value)) {
+    currentPage.value = page
+  }
+}
 
 const navigateToContact = (id) => {
-  router.push({ name: 'ContactDetail', params: { id } });
-};
+  router.push({ name: 'ContactDetail', params: { id } })
+}
 
-const triggerFileInput = () => fileInput.value.click();
-
-const importCSV = async (event) => {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const csvData = Papa.parse(e.target.result, {
-      header: true,
-      skipEmptyLines: true,
-    });
-
-    const newContacts = csvData.data.map(row => ({
-      Alumni_ID: row.Alumni_ID || '',
-      Alumni_Firstname: row.Alumni_Firstname || '',
-      Alumni_Lastname: row.Alumni_Lastname || '',
-      college: row.college || '',
-      Year_Graduated: row.Year_Graduated || null,
-      Program: row.Program || '',
-      Email: row.Email || '',
-      Occupation: row.Occupation || '',
-      Status: row.Status || '',
-      expertise: row.expertise || '', // expertise string in column (e.g. "Technical Expert")
-    }));
-
-    const { error } = await supabase.from('alumni_table').insert(newContacts);
-    if (!error) fetchContacts();
-  };
-  reader.readAsText(file);
-};
-
-const exportCSV = () => {
-  const flatExport = contacts.value.map(contact => ({
-    Alumni_ID: contact.alumni_ID,
-    Alumni_Firstname: contact.alumni_firstname,
-    Alumni_Lastname: contact.Alumni_LastName,
-    college: contact.college,
-    Year_Graduated: contact.Year_Graduated,
-    Program: contact.Program,
-    Email: contact.Email,
-    Occupation: contact.Occupation_Status,
-    Status: contact.Status,
-    expertise: contact.expertise_tags?.map(tag => tag.name).join(', ') || ''
-  }));
-
-  const csvContent = Papa.unparse(flatExport);
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'contacts.csv';
-  link.click();
-};
+const handleNewContact = () => {
+  router.push({ name: 'ContactDetail', params: { id: 'new' } })
+}
 
 const toggleSelectAll = (event) => {
   selectedContacts.value = event.target.checked
     ? paginatedContacts.value.map(c => c.alumni_ID)
-    : [];
-};
+    : []
+}
 
 const toggleSingleSelect = (id) => {
   if (selectedContacts.value.includes(id)) {
-    selectedContacts.value = selectedContacts.value.filter(cid => cid !== id);
+    selectedContacts.value = selectedContacts.value.filter(cid => cid !== id)
   } else {
-    selectedContacts.value.push(id);
+    selectedContacts.value.push(id)
   }
-};
+}
+
+const fileInput = ref(null)
+const triggerFileInput = () => fileInput.value.click()
+
+const importCSV = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = async (e) => {
+    const csvData = Papa.parse(e.target.result, { header: true, skipEmptyLines: true })
+    const newContacts = csvData.data.map(row => ({
+      alumni_ID: parseInt(row.alumni_ID) || null,
+      alumni_Name: row.alumni_Name || '',
+      alumni_firstname: row.alumni_firstname || '',
+      Alumni_LastName: row.Alumni_LastName || '',
+      Year_Graduated: parseInt(row.Year_Graduated) || 0,
+      Program: row.Program || '',
+      Phone_Number: parseInt(row.Phone_Number) || 0,
+      Email: row.Email || '',
+      Address: row.Address || '',
+      Occupation_Status: row.Occupation_Status || '',
+      college: row.college || '',
+      Status: row.Status || '',
+      expertise: row.expertise || ''
+    }))
+    const { error } = await supabase.from('alumni_table').insert(newContacts)
+    if (!error) fetchContacts()
+  }
+  reader.readAsText(file)
+}
+
+const exportCSV = () => {
+  const flatExport = contacts.value.map(contact => ({
+    alumni_ID: contact.alumni_ID,
+    alumni_Name: contact.alumni_Name,
+    alumni_firstname: contact.alumni_firstname,
+    Alumni_LastName: contact.Alumni_LastName,
+    Year_Graduated: contact.Year_Graduated,
+    Program: contact.Program,
+    Phone_Number: contact.Phone_Number,
+    Email: contact.Email,
+    Address: contact.Address,
+    Occupation_Status: contact.Occupation_Status,
+    college: contact.college,
+    Status: contact.Status,
+    expertise: contact.expertise || ''
+  }))
+  const csvContent = Papa.unparse(flatExport)
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = 'contacts.csv'
+  link.click()
+}
 
 const deleteContacts = async () => {
-  if (!selectedContacts.value.length) return;
-
+  if (!selectedContacts.value.length) return
   const { error } = await supabase
     .from('alumni_table')
     .delete()
-    .in('alumni_ID', selectedContacts.value.map(Number));
-
+    .in('alumni_ID', selectedContacts.value.map(Number))
   if (!error) {
-    await fetchContacts();
-    selectedContacts.value = [];
+    await fetchContacts()
+    selectedContacts.value = []
   } else {
-    console.error('Delete failed:', error.message);
+    console.error('Delete failed:', error.message)
   }
-};
-
-const goToPage = (page) => {
-  if (page >= 1 && page <= totalPages.value) currentPage.value = page;
-};
+}
 
 const fetchContacts = async () => {
   const { data: alumni, error } = await supabase
     .from('alumni_table')
-    .select(`
-      *,
-      alumni_expertise (
-        expertise_tags (
-          id,
-          name
-        )
-      )
-    `);
+    .select(`*, alumni_expertise ( expertise_tags ( id, name ) )`)
 
-  if (error) return console.error('Failed to fetch contacts:', error);
-
-  contacts.value = alumni.map(a => ({
-    ...a,
-    expertise_tags: a.alumni_expertise?.map(x => x.expertise_tags) || []
-  }));
-};
+  if (!error) {
+    contacts.value = alumni.map(a => ({
+      ...a,
+      expertise_tags: a.alumni_expertise?.map(x => x.expertise_tags) || []
+    }))
+  } else {
+    console.error('Error fetching contacts:', error) // ✅ use error here only
+  }
+}
 
 const fetchExpertiseTags = async () => {
-  const { data, error } = await supabase.from('expertise_tags').select('*');
-  if (!error) expertiseOptions.value = data;
-};
+  const { data, error } = await supabase.from('expertise_tags').select('*')
+  if (!error) expertiseOptions.value = data
+}
 
 onMounted(() => {
-  fetchContacts();
-  fetchExpertiseTags();
-});
+  fetchContacts()
+  fetchExpertiseTags()
+})
 </script>
-
-
 
 
 
@@ -278,7 +343,7 @@ onMounted(() => {
 
 /* Sidebar Styles */
 .sidebar {
-  width: 180px;
+  width: 190px;
   height: 100vh;
   background: linear-gradient(180deg, #FF4B6E 0%, #E63456 100%);
   color: white;
@@ -353,11 +418,11 @@ onMounted(() => {
 /* Logout Button */
 .logout-btn {
   margin-top: auto;
-  padding: 14px;
+  padding: 12px;
   background-color: rgba(255, 255, 255, 0.1);
   color: white;
   border: none;
-  border-radius: 16px;
+  border-radius: 14px;
   cursor: pointer;
   font-weight: 500;
   transition: all 0.3s ease;
@@ -365,7 +430,6 @@ onMounted(() => {
 
 .logout-btn:hover {
   background-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
 }
 
 /* Sidebar Toggle Button */
@@ -481,6 +545,81 @@ h1 {
   box-shadow: 0 0 0 3px rgba(255, 75, 110, 0.1);
 }
 
+.filter-toggle {
+  padding: 12px 24px;
+  border: 1px solid #FFD6DE;
+  border-radius: 16px;
+  font-size: 15px;
+  background: white;
+  color: #2D1E2F;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  box-shadow: 0 4px 15px rgba(255, 75, 110, 0.08);
+  display: flex;
+  align-items: center;
+}
+
+.filter-toggle:hover {
+  background-color: #FFF5F7;
+  border-color: #FF4B6E;
+}
+
+.filter-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: white;
+  border: 1px solid #FFD6DE;
+  border-radius: 16px;
+  box-shadow: 0 4px 15px rgba(255, 75, 110, 0.08);
+  min-width: 200px;
+  padding: 8px 0;
+  z-index: 1000;
+}
+
+.filter-item {
+  padding: 12px 24px;
+  font-size: 14px;
+  color: #2D1E2F;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.filter-item:hover {
+  background-color: #FFF5F7;
+}
+
+.submenu {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  background: white;
+  border: 1px solid #FFD6DE;
+  border-radius: 16px;
+  box-shadow: 0 4px 15px rgba(255, 75, 110, 0.08);
+  min-width: 200px;
+  padding: 8px 0;
+  z-index: 1001; /* Higher than parent menu */
+}
+
+.submenu-item {
+  padding: 12px 24px;
+  font-size: 14px;
+  color: #2D1E2F;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.submenu-item:hover {
+  background-color: #FFF5F7;
+}
+
+.click-toggle-filter {
+  position: relative;
+}
+
 /* Expertise Dropdown */
 .search-filter-bar select {
   padding: 16px 24px;
@@ -594,4 +733,89 @@ tr:hover {
     overflow-x: auto;
   }
 }
+/* --- Filter Dropdown Click-to-Toggle --- */
+.filter-dropdown {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 30px;
+  margin-right: 60px;
+  z-index: 500;
+}
+
+.filter-label {
+  padding: 14px 24px;
+  background: white;
+  border: 1px solid #FFD6DE;
+  border-radius: 16px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.filter-label:hover {
+  background-color: #FFF5F7;
+}
+
+.filter-menu {
+  position: absolute;
+  top: 55px;
+  right: 0;
+  background: white;
+  border: 1px solid #FFD6DE;
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  min-width: 180px;
+  padding: 10px 0;
+}
+
+.filter-item {
+  position: relative;
+  padding: 12px 20px;
+  font-size: 14px;
+  color: #2D1E2F;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.filter-item:hover {
+  background-color: #FFF5F7;
+}
+
+.submenu {
+  position: absolute;
+  top: 0;
+  left: auto;
+  right: 100%;
+  margin-right: 5px;
+  background: white;
+  border: 1px solid #FFD6DE;
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  min-width: 160px;
+  padding: 10px 0;
+}
+
+.submenu-item {
+  padding: 10px 20px;
+  font-size: 14px;
+  color: #2D1E2F;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s ease;
+}
+
+.submenu-item:hover {
+  background-color: #FFE0E5;
+}
+.submenu.left-side {
+  left: auto;
+  right: 100%;
+  margin-left: 0;
+  margin-right: 5px;
+}
+
 </style>

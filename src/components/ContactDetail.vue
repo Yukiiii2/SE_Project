@@ -42,7 +42,22 @@
         </select>
 
         <label>Expertise</label>
-        <input v-model="editableContact.expertise" :disabled="!isEditing" />
+        <div v-if="isEditing">
+          <select v-model="editableContact.expertise">
+            <option v-for="tag in expertiseTags" :key="tag.id" :value="tag.name">
+              {{ tag.name }}
+            </option>
+            <option value="__add_new__">+ Add new expertise</option>
+          </select>
+          <div v-if="showNewExpertiseInput" class="mt-2">
+            <input v-model="newExpertiseInput" placeholder="New expertise name..." />
+            <button @click="addNewExpertise">Add</button>
+            <button @click="cancelNewExpertise">Cancel</button>
+          </div>
+        </div>
+        <div v-else>
+          <input v-model="editableContact.expertise" disabled />
+        </div>
 
         <div class="buttons">
           <button v-if="isEditing" @click="saveChanges">Apply</button>
@@ -70,10 +85,23 @@
       <div class="notes-section">
         <h3>Notes</h3>
         <ul>
-          <li v-for="(note, index) in editableContact.notes" :key="index">
-            <span>{{ note }}</span>
-            <button @click="editNote(index)">✏️</button>
-            <button @click="deleteNote(index)">🗑️</button>
+          <li
+            v-for="(note, index) in editableContact.notes"
+            :key="note.id"
+            class="note-item"
+          >
+            <div v-if="editingNoteIndex === index" class="note-edit-container">
+              <input v-model="updateNoteText" placeholder="Edit note..." />
+              <button @click="saveUpdatedNote">Save</button>
+              <button @click="cancelEditNote">Cancel</button>
+            </div>
+            <div v-else class="note-display">
+              <div class="note-text">{{ note.note_text }}</div>
+              <div class="note-actions">
+                <button @click="startEditNote(index)">Edit</button>
+                <button @click="deleteNote(index)">Delete</button>
+              </div>
+            </div>
           </li>
         </ul>
         <div class="notes-input-container">
@@ -85,16 +113,17 @@
   </div>
 </template>
 
+
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { supabase } from '../lib/supabaseClient';
+import { ref, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { supabase } from '../lib/supabaseClient'
 
-const route = useRoute();
-const router = useRouter();
-const contactId = route.params.id;
+const route = useRoute()
+const router = useRouter()
+const contactId = route.params.id
 
-const contact = ref(null);
+const contact = ref(null)
 const editableContact = ref({
   firstName: '',
   lastName: '',
@@ -109,15 +138,58 @@ const editableContact = ref({
   expertise: '',
   notes: [],
   messages: []
-});
+})
 
-const newMessage = ref('');
-const newNote = ref('');
-const isEditing = ref(false);
+const newMessage = ref('')
+const newNote = ref('')
+const isEditing = ref(false)
+
+const editingNoteIndex = ref(null)
+const updateNoteText = ref('')
+
+const expertiseTags = ref([])
+const showNewExpertiseInput = ref(false)
+const newExpertiseInput = ref('')
+
+const fetchExpertiseTags = async () => {
+  const { data, error } = await supabase.from('expertise_tags').select('*')
+  if (!error && data) {
+    expertiseTags.value = data
+  }
+}
+
+const addNewExpertise = async () => {
+  const trimmed = newExpertiseInput.value.trim()
+  if (!trimmed) return
+
+  const { data, error } = await supabase
+    .from('expertise_tags')
+    .insert({ name: trimmed })
+    .select()
+
+  if (!error && data?.[0]) {
+    expertiseTags.value.push(data[0])
+    editableContact.value.expertise = data[0].name
+    showNewExpertiseInput.value = false
+    newExpertiseInput.value = ''
+  }
+}
+
+const cancelNewExpertise = () => {
+  showNewExpertiseInput.value = false
+  newExpertiseInput.value = ''
+}
+
+watch(() => editableContact.value.expertise, (val) => {
+  if (val === '__add_new__') {
+    editableContact.value.expertise = ''
+    showNewExpertiseInput.value = true
+  }
+})
 
 const fetchContact = async () => {
   if (contactId === 'new') {
-    contact.value = {};
+    contact.value = {}
     editableContact.value = {
       firstName: '',
       lastName: '',
@@ -132,19 +204,19 @@ const fetchContact = async () => {
       expertise: '',
       notes: [],
       messages: []
-    };
+    }
   } else {
     const { data, error } = await supabase
       .from('alumni_table')
       .select('*')
       .eq('alumni_ID', contactId)
-      .single();
+      .single()
 
     if (error || !data) {
-      console.error('Failed to fetch contact:', error);
-      router.push('/contacts');
+      console.error('Failed to fetch contact:', error)
+      router.push('/contacts')
     } else {
-      contact.value = data;
+      contact.value = data
       editableContact.value = {
         firstName: data.alumni_firstname || '',
         lastName: data.Alumni_LastName || '',
@@ -157,33 +229,34 @@ const fetchContact = async () => {
         company: data.company || '',
         status: data.Status || 'Pending',
         expertise: data.expertise || '',
-        notes: data.notes || [],
-        messages: data.messages || []
-      };
+        notes: [],
+        messages: []
+      }
+      fetchNotes()
     }
   }
-};
+}
 
 const saveChanges = async () => {
-  const contactData = { ...editableContact.value };
+  const contactData = { ...editableContact.value }
 
-  let nextId = contactId;
+  let nextId = contactId
   if (contactId === 'new') {
     const { data: existingContacts, error: fetchError } = await supabase
       .from('alumni_table')
       .select('alumni_ID')
       .order('alumni_ID', { ascending: false })
-      .limit(1);
+      .limit(1)
 
     if (fetchError) {
-      console.error('Failed to fetch IDs:', fetchError.message);
-      alert('Unable to create contact');
-      return;
+      console.error('Failed to fetch IDs:', fetchError.message)
+      alert('Unable to create contact')
+      return
     }
 
     nextId = existingContacts?.[0]?.alumni_ID
       ? parseInt(existingContacts[0].alumni_ID) + 1
-      : 111;
+      : 111
   }
 
   const payload = {
@@ -201,27 +274,27 @@ const saveChanges = async () => {
     college: contactData.college,
     company: contactData.company,
     expertise: contactData.expertise
-  };
+  }
 
-  let response;
+  let response
   if (contactId === 'new') {
-    response = await supabase.from('alumni_table').insert(payload);
+    response = await supabase.from('alumni_table').insert(payload)
   } else {
     response = await supabase
       .from('alumni_table')
       .update(payload)
-      .eq('alumni_ID', contactId);
+      .eq('alumni_ID', contactId)
   }
 
   if (response.error) {
-    console.error('Error saving contact:', response.error.message);
-    alert('Failed to save contact.');
+    console.error('Error saving contact:', response.error.message)
+    alert('Failed to save contact.')
   } else {
-    alert('Contact saved successfully!');
-    isEditing.value = false;
-    router.push('/contacts');
+    alert('Contact saved successfully!')
+    isEditing.value = false
+    router.push('/contacts')
   }
-};
+}
 
 const cancelChanges = () => {
   if (contact.value) {
@@ -237,47 +310,120 @@ const cancelChanges = () => {
       company: contact.value.company || '',
       status: contact.value.Status || 'Pending',
       expertise: contact.value.expertise || '',
-      notes: contact.value.notes || [],
-      messages: contact.value.messages || []
-    };
+      notes: [],
+      messages: []
+    }
+    fetchNotes()
   }
-  isEditing.value = false;
-};
+  isEditing.value = false
+}
 
 const enableEditing = () => {
-  isEditing.value = true;
-};
+  isEditing.value = true
+}
 
-const sendMessage = () => {
+const sendMessage = async () => {
   if (newMessage.value.trim()) {
     editableContact.value.messages.push({
       text: newMessage.value,
       time: new Date().toLocaleTimeString()
-    });
-    newMessage.value = '';
+    })
+
+    const { error } = await supabase.from('contact_messages').insert({
+      alumni_id: contactId,
+      message_text: newMessage.value
+    })
+
+    if (error) {
+      console.error('Failed to send message:', error.message)
+      alert('Error sending message!')
+    }
+
+    newMessage.value = ''
   }
-};
+}
 
-const addNote = () => {
-  if (newNote.value.trim()) {
-    editableContact.value.notes.push(newNote.value);
-    newNote.value = '';
+const fetchMessages = async () => {
+  const { data, error } = await supabase
+    .from('contact_messages')
+    .select('*')
+    .eq('alumni_id', contactId)
+    .order('sent_at', { ascending: true })
+
+  if (!error && data) {
+    editableContact.value.messages = data.map((m) => ({
+      text: m.message_text,
+      time: new Date(m.sent_at).toLocaleTimeString()
+    }))
+  } else {
+    console.error('Failed to fetch messages:', error)
   }
-};
+}
 
-const deleteNote = (index) => {
-  editableContact.value.notes.splice(index, 1);
-};
+const fetchNotes = async () => {
+  const { data, error } = await supabase
+    .from('contact_notes')
+    .select('*')
+    .eq('alumni_ID', contactId)
+    .order('created_at', { ascending: false })
 
-const editNote = (index) => {
-  newNote.value = editableContact.value.notes[index];
-  deleteNote(index);
-};
+  if (!error) {
+    editableContact.value.notes = data
+  }
+}
 
-onMounted(() => {
-  fetchContact();
-});
+const addNote = async () => {
+  if (!newNote.value.trim()) return
+
+  const { error } = await supabase.from('contact_notes').insert({
+    alumni_ID: contactId,
+    note_text: newNote.value
+  })
+
+  if (!error) {
+    newNote.value = ''
+    fetchNotes()
+  }
+}
+
+const deleteNote = async (index) => {
+  const note = editableContact.value.notes[index]
+  const { error } = await supabase.from('contact_notes').delete().eq('id', note.id)
+
+  if (!error) fetchNotes()
+}
+
+const startEditNote = (index) => {
+  editingNoteIndex.value = index
+  updateNoteText.value = editableContact.value.notes[index].note_text
+}
+
+const saveUpdatedNote = async () => {
+  if (editingNoteIndex.value === null || !updateNoteText.value.trim()) return
+
+  const note = editableContact.value.notes[editingNoteIndex.value]
+  const { error } = await supabase
+    .from('contact_notes')
+    .update({ note_text: updateNoteText.value })
+    .eq('id', note.id)
+
+  if (!error) {
+    editingNoteIndex.value = null
+    updateNoteText.value = ''
+    fetchNotes()
+  } else {
+    console.error('Failed to update note:', error.message)
+  }
+}
+
+onMounted(async () => {
+  await fetchContact()
+  await fetchMessages()
+  fetchExpertiseTags()
+})
 </script>
+
+
 
 
 
@@ -416,17 +562,46 @@ h3 {
   padding: 0.5rem;
 }
 
+/* Notes Section Enhancements */
 .notes-section li {
-  background: #FFF5F7;
-  padding: 1rem;
-  border-radius: 12px;
-  margin-bottom: 0.8rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   border: 2px solid #FFD6DE;
-  transition: all 0.2s ease;
+  border-radius: 12px;
+  padding: 14px 18px;
+  background: #FFF5F7;
+  margin-bottom: 0.8rem;
 }
+
+.note-text {
+  font-size: 1rem;
+  font-weight: 500;
+  flex-grow: 1;
+  margin-right: 16px;
+  word-break: break-word;
+}
+
+.note-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.note-actions .action-btn {
+  background: linear-gradient(135deg, #FF4B7C, #FF1C55);
+  border: none;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.note-actions .action-btn:hover {
+  background: #ff2e64;
+}
+
 
 .notes-section li:hover {
   transform: translateX(5px);

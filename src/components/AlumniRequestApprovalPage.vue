@@ -76,30 +76,34 @@
             <input type="text" v-model="candidateSearch" placeholder="Search by name or expertise" />
           </div>
 
-          <div
-            v-for="candidate in filteredCandidates"
-            :key="candidate.id"
-            class="form-group"
-          >
-            <input
-              type="checkbox"
-              :value="candidate"
-              v-model="selectedCandidate"
-              @change="confirmSelection(candidate)"
-            />
-            {{ candidate.alumni_Name }} ({{ candidate.expertise || 'No expertise' }})
-            <span
-              v-if="isRecommended(candidate)"
-              style="color: #FF4B7E; font-weight: 500;"
+          <!-- Scrollable candidate list -->
+          <div class="scrollable-candidates">
+            <div
+              v-for="candidate in filteredCandidates"
+              :key="candidate.id"
+              class="form-group"
             >
-              - Recommended
-            </span>
+              <input
+                type="checkbox"
+                :value="candidate"
+                v-model="selectedCandidate"
+              />
+              {{ candidate.alumni_Name }} ({{ candidate.expertise || 'No expertise' }})
+              <span
+                v-if="isRecommended(candidate)"
+                style="color: #FF4B7E; font-weight: 500;"
+              >
+                - Recommended
+              </span>
+            </div>
           </div>
 
-          <button @click="reviewSelection" v-if="selectedCandidate.length === 1">
-            Review
-          </button>
-          <button @click="closeModal">Close</button>
+          <div class="button-group">
+            <button @click="reviewSelection" :disabled="selectedCandidate.length === 0">
+              Review
+            </button>
+            <button @click="closeModal">Close</button>
+          </div>
         </div>
       </div>
 
@@ -117,6 +121,7 @@
     </main>
   </div>
 </template>
+
 
 
 <script setup>
@@ -158,14 +163,6 @@ const viewRequest = (req) => {
   selectedCandidate.value = []
   showReview.value = false
 }
-
-const confirmSelection = (candidate) => {
-  if (selectedCandidate.value.length > 1) {
-    alert('Only one candidate can be selected')
-    selectedCandidate.value = [candidate]
-  }
-}
-
 const reviewSelection = () => {
   showReview.value = true
 }
@@ -292,9 +289,6 @@ onMounted(async () => {
 
 
 
-
-
-
 <style scoped>
 
 .approval-page {
@@ -315,23 +309,35 @@ onMounted(async () => {
   left: 0;
   top: 0;
   bottom: 0;
-  width: 280px;
+  width: 190px;
   background: linear-gradient(180deg, #ff4b7c 0%, #ff1c55 100%);
   padding: 30px;
   color: white;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start; /* Changed from space-between */
   z-index: 100;
-  margin: 0;
+}
+
+.sidebar.open {
+  left: 0;
+}
+
+/* Sidebar Header */
+.sidebar-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 40px;
 }
 
 .logo {
   display: flex;
   align-items: center;
   gap: 15px;
-  margin-bottom: 40px;
+  margin-top: 80px; /* Added margin top */
 }
+
 
 .logo img {
   width: 45px;
@@ -348,7 +354,8 @@ onMounted(async () => {
 .nav-links {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
+  margin: 20px 0;
 }
 
 .nav-item {
@@ -356,24 +363,89 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   color: #ffb3c7;
+  padding: 14px;
+  border-radius: 16px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.nav-item:hover,
+.nav-item.active {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  transform: translateX(5px);
+}
+
+.logout {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #ffffff;
+  background-color: #ff1c55;
+  text-decoration: none;
   padding: 12px;
   border-radius: 14px;
-  text-decoration: none;
+  margin-top: auto;
   transition: all 0.3s ease;
 }
 
-.nav-item:hover, .nav-item.active {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+.logout:hover {
+  background: #ff4b7c;
 }
 
+/* Update the main content margin to match new sidebar width */
 .main-content {
   flex: 1;
   margin-left: 280px;
-  padding: 30px;
+  padding: 40px;
   overflow-y: auto;
   min-width: 0;
   width: calc(100% - 280px);
+}
+
+/* Add responsive styles for the sidebar */
+@media (max-width: 768px) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    height: auto;
+    padding: 15px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .nav-links {
+    flex-direction: row;
+    gap: 10px;
+  }
+
+  .logo {
+    margin-bottom: 0;
+  }
+
+  .logo h2 {
+    display: none;
+  }
+
+  .nav-item span,
+  .logout span {
+    display: none;
+  }
+
+  .nav-item,
+  .logout {
+    justify-content: center;
+    padding: 8px;
+  }
+
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 20px;
+  }
 }
 
 /* Filters Section */
@@ -583,5 +655,24 @@ button.secondary:hover {
 ::-webkit-scrollbar-thumb {
   background: #ff4b7c;
   border-radius: 4px;
+}
+.scrollable-candidates {
+  max-height: 250px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.button-group {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.modal-content {
+  max-height: 90vh;
+  overflow-y: auto;
 }
 </style>

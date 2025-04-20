@@ -8,54 +8,45 @@
       </div>
       <nav class="nav-links">
         <router-link to="/home" class="nav-item">
-          <i class="fas fa-home"></i>
-          <span>Home</span>
+          <i class="fas fa-home"></i><span>Home</span>
         </router-link>
         <router-link to="/contacts" class="nav-item">
-          <i class="fas fa-address-book"></i>
-          <span>Contacts</span>
+          <i class="fas fa-address-book"></i><span>Contacts</span>
         </router-link>
         <router-link to="/events" class="nav-item active">
-          <i class="fas fa-calendar"></i>
-          <span>Events</span>
+          <i class="fas fa-calendar"></i><span>Events</span>
         </router-link>
         <router-link to="/approve-requests" class="nav-item">
-          <i class="fas fa-envelope"></i>
-          <span>Requests</span>
+          <i class="fas fa-envelope"></i><span>Requests</span>
         </router-link>
       </nav>
       <a href="#" class="logout" @click.prevent="handleLogout">
-        <i class="fas fa-sign-out-alt"></i>
-        <span>Logout</span>
+        <i class="fas fa-sign-out-alt"></i><span>Logout</span>
       </a>
     </aside>
 
     <!-- Main Content -->
     <main class="main-content">
+      <!-- Stats -->
       <section class="stats-cards">
         <div class="card">
-          <div class="card-icon pink">
-            <i class="fas fa-calendar"></i>
-          </div>
+          <div class="card-icon pink"><i class="fas fa-calendar"></i></div>
           <h3>Total Events</h3>
           <p>{{ events.length || 0 }}</p>
         </div>
         <div class="card">
-          <div class="card-icon green">
-            <i class="fas fa-user-check"></i>
-          </div>
+          <div class="card-icon green"><i class="fas fa-user-check"></i></div>
           <h3>Active Events</h3>
           <p>{{ activeEvents || 0 }}</p>
         </div>
         <div class="card">
-          <div class="card-icon purple">
-            <i class="fas fa-users"></i>
-          </div>
+          <div class="card-icon purple"><i class="fas fa-users"></i></div>
           <h3>Total Attendees</h3>
           <p>{{ totalAttendees || 0 }}</p>
         </div>
       </section>
 
+      <!-- Event List & Filter -->
       <section class="events-section">
         <div class="section-header">
           <div>
@@ -74,12 +65,15 @@
           </div>
           <select v-model="selectedEventType" class="filter-select">
             <option value="">All Types</option>
-            <option v-for="type in eventTypes" :key="type" :value="type">{{ formatEventType(type) }}</option>
+            <option v-for="type in eventTypes" :key="type" :value="type">
+              {{ formatEventType(type) }}
+            </option>
           </select>
         </div>
 
+        <!-- Event Cards -->
         <div class="events-grid">
-          <div v-for="event in filteredEvents" :key="event.id" class="event-card">
+          <div v-for="event in paginatedEvents" :key="event.id" class="event-card">
             <div class="event-date">
               <span class="day">{{ formatDate(event.dateFrom).day }}</span>
               <span class="month">{{ formatDate(event.dateFrom).month }}</span>
@@ -104,24 +98,47 @@
             </div>
           </div>
         </div>
+
+        <!-- Pagination -->
+        <div class="pagination" v-if="totalPages > 1">
+          <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1">Previous</button>
+          <span>Page {{ currentPage }} of {{ totalPages }}</span>
+          <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages">Next</button>
+        </div>
       </section>
 
-      <section class="calendar-section">
-        <vue-cal
-          :events="calendarEvents"
-          default-view="week"
-          :disable-views="['years', 'year', 'month']"
-          @event-click="handleEventClick"
-        >
-          <template v-slot:event="{ event }">
-            <div class="custom-event">
-              <strong>{{ event.title }}</strong>
-              <p>{{ event.content }}</p>
-            </div>
-          </template>
-        </vue-cal>
-      </section>
+      <!-- Calendar -->
+<section class="calendar-section">
+  <vue-cal
+  style="height: 600px"
+  :events="calendarEvents"
+  default-view="week"
+  :disable-views="['years', 'year', 'month']"
+  @event-click="handleEventClick"
+>
+  <template #event="props">
+    <div class="custom-event" @click.stop="handleEventClick(props)">
+      <strong>{{ props.event.title || 'No Title' }}</strong>
+      <p>{{ props.event.content }}</p>
+    </div>
+  </template>
+</vue-cal>
+</section>
     </main>
+
+    <!-- Calendar Event Detail Modal -->
+    <div v-if="isEventDetailModalVisible" class="modal">
+      <div class="modal-content">
+    <h2>{{ selectedEventDetail.name }}</h2>
+    <p><strong>Venue:</strong> {{ selectedEventDetail.venue || 'N/A' }}</p>
+    <p><strong>Event Type:</strong> {{ formatEventType(selectedEventDetail.event_type) }}</p>
+    <p><strong>Date From:</strong> {{ formatDate(selectedEventDetail.dateFrom).month }} {{ formatDate(selectedEventDetail.dateFrom).day }}, {{ formatDate(selectedEventDetail.dateFrom).year }}</p>
+    <p><strong>Date To:</strong> {{ formatDate(selectedEventDetail.dateTo).month }} {{ formatDate(selectedEventDetail.dateTo).day }}, {{ formatDate(selectedEventDetail.dateTo).year }}</p>
+    <div class="modal-actions">
+      <button @click="isEventDetailModalVisible = false">Close</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Create Event Modal -->
     <div v-if="isCreateModalVisible" class="modal">
@@ -138,11 +155,11 @@
           </div>
           <div class="form-group">
             <label>Date From</label>
-            <input type="date" v-model="newEvent.dateFrom" required />
+            <input type="date" v-model="newEvent.dateFrom" :min="today" required />
           </div>
           <div class="form-group">
             <label>Date To</label>
-            <input type="date" v-model="newEvent.dateTo" required />
+            <input type="date" v-model="newEvent.dateTo" :min="newEvent.dateFrom || today" required />
           </div>
           <div class="form-group">
             <label>Event Type</label>
@@ -162,9 +179,11 @@
           </div>
           <div class="form-group">
             <label>Invite Alumni</label>
-            <div v-for="alumnus in alumni" :key="alumnus.id">
-              <input type="checkbox" :value="alumnus.id" v-model="newEvent.invitedAlumni" />
-              <span>{{ alumnus.name }} ({{ alumnus.email }})</span>
+            <div class="invite-alumni-scroll">
+              <div v-for="alumnus in alumni" :key="alumnus.id" class="invite-option">
+                <input type="checkbox" :value="alumnus.id" v-model="newEvent.invitedAlumni" />
+                <span>{{ alumnus.name }} ({{ alumnus.email }})</span>
+              </div>
             </div>
           </div>
           <div class="modal-actions">
@@ -176,6 +195,8 @@
     </div>
   </div>
 </template>
+
+
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
@@ -189,11 +210,19 @@ const events = ref([])
 const calendarEvents = ref([])
 const alumni = ref([])
 const eventTypes = ref([])
+
+const today = new Date().toISOString().split('T')[0]
 const searchQuery = ref('')
 const selectedEventType = ref('')
+const currentPage = ref(1)
+const pageSize = 6
+
 const isCreateModalVisible = ref(false)
 const isAddingNewType = ref(false)
 const newEventType = ref('')
+const isEventDetailModalVisible = ref(false)
+const selectedEventDetail = ref(null)
+
 const newEvent = ref({
   name: '',
   venue: '',
@@ -216,19 +245,30 @@ const totalAttendees = computed(() =>
 
 const filteredEvents = computed(() =>
   events.value.filter((event) => {
-    const matchName = event.name
-      ?.toLowerCase()
-      .includes(searchQuery.value.toLowerCase())
-    const matchType =
-      !selectedEventType.value || event.event_type === selectedEventType.value
-    return matchName && matchType
+    const matchName = event.name?.toLowerCase().includes(searchQuery.value.toLowerCase())
+    const matchVenue = event.venue?.toLowerCase().includes(searchQuery.value.toLowerCase())
+    const matchTypeText = formatEventType(event.event_type).toLowerCase().includes(searchQuery.value.toLowerCase())
+    const matchType = !selectedEventType.value || event.event_type === selectedEventType.value
+    return (matchName || matchVenue || matchTypeText) && matchType
   })
 )
 
+const paginatedEvents = computed(() => {
+  const start = (currentPage.value - 1) * pageSize
+  return filteredEvents.value.slice(start, start + pageSize)
+})
+
+const totalPages = computed(() =>
+  Math.ceil(filteredEvents.value.length / pageSize)
+)
+
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) currentPage.value = page
+}
+
 const formatDate = (dateStr) => {
   const date = new Date(dateStr)
-  if (isNaN(date.getTime()))
-    return { day: 'N/A', month: 'N/A', year: 'N/A' }
+  if (isNaN(date.getTime())) return { day: 'N/A', month: 'N/A', year: 'N/A' }
   return {
     day: date.getDate(),
     month: date.toLocaleString('default', { month: 'short' }).toUpperCase(),
@@ -240,6 +280,7 @@ const fetchEvents = async () => {
   const { data, error } = await supabase
     .from('events')
     .select('id, name, venue, date_from, date_to, event_type, invited_count')
+
   if (error || !data) return console.error('Error fetching events:', error)
 
   events.value = data.map((event) => ({
@@ -253,11 +294,16 @@ const fetchEvents = async () => {
   }))
 
   calendarEvents.value = events.value.map((event) => ({
-    title: event.name || 'Untitled',
-    content: formatEventType(event.event_type),
-    start: new Date(event.dateFrom),
-    end: new Date(event.dateTo)
-  }))
+  id: event.id,
+  title: event.name || 'Untitled',
+  content: formatEventType(event.event_type),
+  start: new Date(event.dateFrom),
+  end: new Date(event.dateTo),
+  venue: event.venue,
+  event_type: event.event_type,
+  dateFrom: event.dateFrom,
+  dateTo: event.dateTo
+}))
 }
 
 const fetchAlumni = async () => {
@@ -275,7 +321,7 @@ const fetchAlumni = async () => {
 
 const fetchEventTypes = async () => {
   const { data } = await supabase.from('event_types').select('name')
-  if (data) eventTypes.value = data.map((e) => e.name)
+  if (data) eventTypes.value = [...new Set(data.map((e) => e.name))]
 }
 
 const showCreateEventModal = () => {
@@ -321,7 +367,7 @@ const cancelNewType = () => {
 
 const createEvent = async () => {
   try {
-    const invitedAlumni = [...newEvent.value.invitedAlumni] // Ensure it's populated
+    const invitedAlumni = [...newEvent.value.invitedAlumni]
     const { data: createdEvent, error: eventError } = await supabase
       .from('events')
       .insert([{
@@ -330,7 +376,7 @@ const createEvent = async () => {
         date_from: newEvent.value.dateFrom,
         date_to: newEvent.value.dateTo,
         event_type: newEvent.value.type,
-        invited_count: invitedAlumni.length // ✅ Insert directly with count
+        invited_count: invitedAlumni.length
       }])
       .select()
 
@@ -366,12 +412,23 @@ const handleLogout = () => {
   router.push('/')
 }
 
-const handleEventClick = ({ event }) => {
+const handleEventClick = (eventObject) => {
+  const event = eventObject?.event
+
   if (!event || !event.title) {
-    console.warn('Event object missing or malformed:', event)
+    console.warn('Missing event data:', event)
     return
   }
-  alert(`Event: ${event.title}\nType: ${event.content}`)
+
+  selectedEventDetail.value = {
+    name: event.title,
+    venue: event.venue,
+    dateFrom: event.dateFrom,
+    dateTo: event.dateTo,
+    event_type: event.event_type
+  }
+
+  isEventDetailModalVisible.value = true
 }
 
 onMounted(() => {
@@ -380,6 +437,7 @@ onMounted(() => {
   fetchEvents()
 })
 </script>
+
 
 
 
@@ -405,71 +463,132 @@ body, html {
 /* Sidebar */
 .sidebar {
   position: fixed;
-  left: 0; top: 0; bottom: 0;
-  width: 280px;
-  background: linear-gradient(180deg, #ff4b7c, #ff1c55);
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 250px;
+  background: linear-gradient(180deg, #ff4b7c 0%, #ff1c55 100%);
   padding: 30px;
   color: white;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   z-index: 100;
 }
+
 .logo {
   display: flex;
   align-items: center;
   gap: 15px;
+  margin-top: 80px;
   margin-bottom: 40px;
 }
+
 .logo img {
-  width: 60px;
+  width: 45px;
+  height: auto;
   filter: brightness(0) invert(1);
 }
+
 .logo h2 {
-  font-size: 24px;
+  font-size: 20px;
+  font-weight: 600;
   color: white;
 }
+
 .nav-links {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
+  margin: 20px 0;
 }
+
 .nav-item {
   display: flex;
   align-items: center;
   gap: 12px;
   color: #ffb3c7;
-  padding: 12px;
-  border-radius: 14px;
+  padding: 14px;
+  border-radius: 16px;
   text-decoration: none;
-  font-size: 18px;
   transition: all 0.3s ease;
+  font-weight: 500;
 }
-.nav-item:hover, .nav-item.active {
+
+.nav-item:hover,
+.nav-item.active {
   background: rgba(255, 255, 255, 0.2);
   color: white;
+  transform: translateX(5px);
 }
+
 .logout {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: white;
+  color: #ffffff;
   background-color: #ff1c55;
+  text-decoration: none;
   padding: 12px;
   border-radius: 14px;
-  font-size: 18px;
+  margin-top: auto;
   transition: all 0.3s ease;
 }
+
 .logout:hover {
   background: #ff4b7c;
 }
 
-/* Main Content */
+/* Update main content to match sidebar width */
 .main-content {
-  margin-left: 280px;
+  margin-left: 220px;
   padding: 40px;
-  width: calc(100% - 280px);
+  width: calc(100% - 220px);
   overflow-y: auto;
+}
+
+/* Responsive styles for sidebar */
+@media (max-width: 768px) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    height: auto;
+    padding: 15px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .nav-links {
+    flex-direction: row;
+    gap: 10px;
+  }
+
+  .logo {
+    margin: 0;
+  }
+
+  .logo h2 {
+    display: none;
+  }
+
+  .nav-item span,
+  .logout span {
+    display: none;
+  }
+
+  .nav-item,
+  .logout {
+    justify-content: center;
+    padding: 8px;
+  }
+
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 20px;
+  }
 }
 
 /* Stats Cards */
@@ -864,5 +983,88 @@ body, html {
   .nav-item, .logout {
     padding: 8px;
   }
+}
+/* Modern scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #ffe0e5;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ff4b7c;
+  border-radius: 4px;
+}
+
+/* Update the invite-alumni-scroll styles */
+.invite-alumni-scroll {
+  max-height: 250px;
+  overflow-y: auto;
+  border: 1px solid #ffe0e5;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+
+.invite-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  transition: background-color 0.3s ease;
+}
+
+.invite-option:hover {
+  background-color: #fff5f7;
+  border-radius: 8px;
+}
+
+.invite-option input[type="checkbox"] {
+  accent-color: #ff4b7c;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.invite-option span {
+  color: #333;
+  font-size: 14px;
+}
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  text-align: center;
+}
+.modal-content h2 {
+  margin-bottom: 1rem;
+}
+.modal-actions button {
+  margin-top: 1rem;
+  padding: 0.5rem 1.5rem;
+  background-color: #f74e91;
+  border: none;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
 }
 </style>
