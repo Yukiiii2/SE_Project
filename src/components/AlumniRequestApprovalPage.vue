@@ -268,10 +268,17 @@ const fetchCandidates = async () => {
 
 const filteredCandidates = computed(() => {
   const keyword = candidateSearch.value.toLowerCase()
-  return candidates.value.filter(c =>
-    c.alumni_Name?.toLowerCase().includes(keyword) ||
-    c.expertise?.toLowerCase().includes(keyword)
-  )
+  return candidates.value
+    .filter(c =>
+      c.alumni_Name?.toLowerCase().includes(keyword) ||
+      c.expertise?.toLowerCase().includes(keyword)
+    )
+    .sort((a, b) => {
+      // Recommended candidates go to the top
+      const aRecommended = isRecommended(a) ? 1 : 0
+      const bRecommended = isRecommended(b) ? 1 : 0
+      return bRecommended - aRecommended
+    })
 })
 
 const isRecommended = (candidate) => {

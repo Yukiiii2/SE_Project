@@ -283,27 +283,29 @@ const fetchEvents = async () => {
 
   if (error || !data) return console.error('Error fetching events:', error)
 
-  events.value = data.map((event) => ({
-    id: event.id,
-    name: event.name,
-    venue: event.venue,
-    dateFrom: event.date_from,
-    dateTo: event.date_to,
-    event_type: event.event_type,
-    invited_count: event.invited_count
-  }))
+  events.value = data
+    .map((event) => ({
+      id: event.id,
+      name: event.name,
+      venue: event.venue,
+      dateFrom: event.date_from,
+      dateTo: event.date_to,
+      event_type: event.event_type,
+      invited_count: event.invited_count
+    }))
+    .sort((a, b) => new Date(a.dateFrom) - new Date(b.dateFrom)) // ✅ soonest first
 
   calendarEvents.value = events.value.map((event) => ({
-  id: event.id,
-  title: event.name || 'Untitled',
-  content: formatEventType(event.event_type),
-  start: new Date(event.dateFrom),
-  end: new Date(event.dateTo),
-  venue: event.venue,
-  event_type: event.event_type,
-  dateFrom: event.dateFrom,
-  dateTo: event.dateTo
-}))
+    id: event.id,
+    title: event.name || 'Untitled',
+    content: formatEventType(event.event_type),
+    start: new Date(event.dateFrom),
+    end: new Date(event.dateTo),
+    venue: event.venue,
+    event_type: event.event_type,
+    dateFrom: event.dateFrom,
+    dateTo: event.dateTo
+  }))
 }
 
 const fetchAlumni = async () => {

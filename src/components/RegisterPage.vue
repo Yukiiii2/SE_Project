@@ -44,43 +44,54 @@
   const success = ref('');
   
   const handleRegister = async () => {
-    error.value = '';
-    success.value = '';
-  
-    if (password.value !== confirmPassword.value) {
-      error.value = "Passwords do not match.";
-      return;
-    }
-  
-    const { error: signUpError } = await supabase.auth.signUp({
-      email: email.value,
-      password: password.value,
-      options: {
-        data: {
-          first_name: firstName.value,
-          last_name: lastName.value
-        }
+  error.value = ''
+  success.value = ''
+
+  if (password.value !== confirmPassword.value) {
+    error.value = 'Passwords do not match.'
+    return
+  }
+
+  // Try logging in to check if email exists
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+  email: email.value,
+  password: password.value // can be blank or dummy
+})
+
+  if (!signInError) {
+    error.value = 'This email is already registered. Please use a different email address.'
+    return
+  }
+
+  // Proceed with registration
+  const { error: signUpError } = await supabase.auth.signUp({
+    email: email.value,
+    password: password.value,
+    options: {
+      data: {
+        first_name: firstName.value,
+        last_name: lastName.value,
       }
-    });
-  
-    if (signUpError) {
-      error.value = signUpError.message;
-      return;
     }
-  
-    success.value = 'Registration successful! Please check your email to verify your account. Redirecting to homepage...';
-  
-    // Clear form fields
-    firstName.value = '';
-    lastName.value = '';
-    email.value = '';
-    password.value = '';
-    confirmPassword.value = '';
-  
-    // Redirect after 6 seconds
-    setTimeout(() => {
-      router.push('/');
-    }, 6000);
+  })
+
+  if (signUpError) {
+    error.value = signUpError.message
+    return
+  }
+
+  success.value = 'Registration successful! Please check your email to verify your account. Redirecting to homepage...'
+
+  // Clear fields
+  firstName.value = ''
+  lastName.value = ''
+  email.value = ''
+  password.value = ''
+  confirmPassword.value = ''
+
+  setTimeout(() => {
+    router.push('/')
+  }, 6000)
   };
   </script>
   

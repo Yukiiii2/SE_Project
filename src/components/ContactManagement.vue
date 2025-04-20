@@ -58,10 +58,6 @@
                 </div>
               </div>
             </div>
-
-            <div class="filter-item" @click="applyFilter('Year_Graduated', '')">Date Graduated</div>
-            <div class="filter-item" @click="applyFilter('Occupation_Status', '')">Occupation</div>
-            <div class="filter-item" @click="applyFilter('company', '')">Company</div>
           </div>
         </div>
       </div>
@@ -177,12 +173,14 @@ const filteredContacts = computed(() => {
   contact.alumni_ID,
   contact.alumni_Name,
   contact.Email,
+  contact.college,
   contact.Phone_Number,
   contact.Year_Graduated,
   contact.Occupation_Status,
   contact.Program,
   contact.College,
-  contact.Company
+  contact.Company,
+  contact.expertise
 ]
 
     const matchesSearch = searchable.some(val =>
@@ -261,7 +259,7 @@ const importCSV = async (event) => {
       Status: row.Status || '',
       expertise: row.expertise || ''
     }))
-    const { error } = await supabase.from('alumni_table').insert(newContacts)
+    const { error } = await supabase.from('alumni_table').upsert(newContacts, { onConflict: 'alumni_ID' })
     if (!error) fetchContacts()
   }
   reader.readAsText(file)
