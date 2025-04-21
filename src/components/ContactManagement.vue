@@ -266,7 +266,11 @@ const importCSV = async (event) => {
 }
 
 const exportCSV = () => {
-  const flatExport = contacts.value.map(contact => ({
+  const exportList = selectedContacts.value.length
+    ? contacts.value.filter(c => selectedContacts.value.includes(c.alumni_ID))
+    : contacts.value
+
+  const flatExport = exportList.map(contact => ({
     alumni_ID: contact.alumni_ID,
     alumni_Name: contact.alumni_Name,
     alumni_firstname: contact.alumni_firstname,
@@ -281,11 +285,14 @@ const exportCSV = () => {
     Status: contact.Status,
     expertise: contact.expertise || ''
   }))
+
   const csvContent = Papa.unparse(flatExport)
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
-  link.download = 'contacts.csv'
+  link.download = selectedContacts.value.length
+    ? 'selected_contacts.csv'
+    : 'contacts.csv'
   link.click()
 }
 

@@ -36,33 +36,49 @@
 
 <script setup>
 import { ref } from 'vue'
-import { supabase } from '../lib/supabaseClient'
 
 const email = ref('')
 const error = ref('')
 const success = ref('')
+const loading = ref(false)
 
 const handleForgotPassword = async () => {
   error.value = ''
   success.value = ''
+  loading.value = true
 
   if (!email.value) {
     error.value = 'Please enter an email.'
+    loading.value = false
     return
   }
 
-  const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.value, {
-    redirectTo: `${window.location.origin}/reset-password`
-  })
+  try {
+    const res = await fetch('/functions/v1/check-reset-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email: email.value })
+    })
 
-  if (resetError) {
-    error.value = resetError.message || 'Something went wrong.'
-    return
+    const result = await res.json()
+
+    if (result.status === 'not_found') {
+      error.value = 'This email is not registered in our system.'
+    } else if (result.status === 'ok') {
+      success.value = 'Check your email for the reset link.'
+    } else {
+      error.value = result.message || 'Something went wrong.'
+    }
+  } catch (e) {
+    error.value = 'Account does not exist. Please try again.'
+  } finally {
+    loading.value = false
   }
-
-  success.value = 'Check your email for the reset link.'
 }
 </script>
+
 
 
 <style scoped>
@@ -250,4 +266,16 @@ const handleForgotPassword = async () => {
     padding: 20px 0;
   }
 }
+.error-message {
+  color: #ff4b7e;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+.success-message {
+  color: #4caf50;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
 </style>
