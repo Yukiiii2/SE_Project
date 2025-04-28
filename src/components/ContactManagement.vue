@@ -30,7 +30,20 @@
 
       <!-- Search and Click-to-Toggle Filters -->
       <div style="display: flex; gap: 10px; margin-bottom: 30px; margin-left: 60px; align-items: center;">
-        <input type="text" class="search-bar" v-model="searchTerm" placeholder="Search contacts..." />
+  <input
+    type="text"
+    class="search-bar"
+    v-model="searchTerm"
+    placeholder="Search contacts..."
+  />
+
+  <button
+    v-if="isFilterActive"
+    @click="resetFilters"
+    class="reset-button"
+  >
+    Reset
+  </button>
 
         <!-- Click-to-Toggle Filter Dropdown -->
         <div class="click-toggle-filter">
@@ -61,6 +74,7 @@
           </div>
         </div>
       </div>
+      
 
       <!-- Table -->
       <table>
@@ -117,7 +131,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Papa from 'papaparse'
 import { supabase } from '../lib/supabaseClient'
@@ -164,43 +178,58 @@ const applyFilter = (category, value) => {
   currentPage.value = 1
 }
 
+// Reset Filter and Search
+const resetFilters = () => {
+  searchTerm.value = ''
+  filterCategory.value = ''
+  filterValue.value = ''
+  currentPage.value = 1
+}
+
+const isFilterActive = computed(() => {
+  return searchTerm.value !== '' || (filterCategory.value !== '' && filterValue.value !== '')
+})
+
+// Watch if any search or filter applied
+watch([searchTerm, filterCategory, filterValue], () => {
+  // just reactively detect but no additional action needed here
+})
 
 const filteredContacts = computed(() => {
   const search = searchTerm.value.toLowerCase()
 
-  return contacts.value.filter(contact => {
-    const searchable = [
-  contact.alumni_ID,
-  contact.alumni_Name,
-  contact.Email,
-  contact.college,
-  contact.Phone_Number,
-  contact.Year_Graduated,
-  contact.Occupation_Status,
-  contact.Program,
-  contact.College,
-  contact.Company,
-  contact.expertise
-]
+  return contacts.value
+    .filter(contact => {
+      const searchable = [
+        contact.alumni_ID,
+        contact.alumni_Name,
+        contact.Email,
+        contact.college,
+        contact.Phone_Number,
+        contact.Year_Graduated,
+        contact.Occupation_Status,
+        contact.Program,
+        contact.College,
+        contact.Company,
+        contact.expertise
+      ]
+      const matchesSearch = searchable.some(val =>
+        val !== null && val !== undefined && String(val).toLowerCase().includes(search)
+      )
 
-    const matchesSearch = searchable.some(val =>
-      val !== null && val !== undefined && String(val).toLowerCase().includes(search)
-    )
+      let matchesFilter = true
+      if (filterCategory.value === 'Expertise') {
+        matchesFilter =
+          !filterValue.value ||
+          (contact.expertise && contact.expertise.includes(filterValue.value))
+      } else if (filterCategory.value && filterValue.value) {
+        matchesFilter = contact[filterCategory.value]?.toString() === filterValue.value
+      }
 
-    let matchesFilter = true
-
-    if (filterCategory.value === 'Expertise') {
-      matchesFilter =
-        !filterValue.value ||
-        (contact.expertise && contact.expertise.includes(filterValue.value))
-    } else if (filterCategory.value && filterValue.value) {
-      matchesFilter = contact[filterCategory.value]?.toString() === filterValue.value
-    }
-
-    return matchesSearch && matchesFilter
-  })
+      return matchesSearch && matchesFilter
+    })
+    .sort((a, b) => a.alumni_ID - b.alumni_ID) // Sort based on alumni_ID
 })
-
 
 const paginatedContacts = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
@@ -822,5 +851,34 @@ tr:hover {
   margin-left: 0;
   margin-right: 5px;
 }
+.reset-button {
+  background-color: #fff0f5;
+  color: #ff3e7f;
+  border: 1px solid #ff3e7f;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease; /* smooth animation */
+  cursor: pointer;
+  margin-left: 10px; /* small gap from search bar */
+}
 
+.reset-button:hover {
+  background-color: #ff3e7f;
+  color: white;
+  transform: scale(1.05); /* slightly grow on hover */
+  box-shadow: 0 2px 8px rgba(255, 62, 127, 0.3); /* soft pink shadow */
+}
+
+.reset-button-enter-active,
+.reset-button-leave-active {
+  transition: opacity 0.5s, transform 0.5s;
+}
+
+.reset-button-enter-from,
+.reset-button-leave-to {
+  opacity: 0;
+  transform: translateX(10px);
+}
 </style>

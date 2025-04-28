@@ -36,6 +36,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { supabase } from '../lib/supabaseClient' 
 
 const email = ref('')
 const error = ref('')
@@ -54,29 +55,30 @@ const handleForgotPassword = async () => {
   }
 
   try {
-    const res = await fetch('/functions/v1/check-reset-email', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ email: email.value })
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.value, {
+      redirectTo: `${window.location.origin}/reset-password`
     })
 
-    const result = await res.json()
+    if (resetError) {
+      console.error('Reset error:', resetError)
 
-    if (result.status === 'not_found') {
-      error.value = 'This email is not registered in our system.'
-    } else if (result.status === 'ok') {
-      success.value = 'Check your email for the reset link.'
+      // Properly detect non-existing email based on resetError.status
+      if (resetError.status === 400 || resetError.message?.toLowerCase().includes('user')) {
+        error.value = 'This email is not registered in our system.'
+      } else {
+        error.value = 'Something went wrong. Please try again.'
+      }
     } else {
-      error.value = result.message || 'Something went wrong.'
+      success.value = 'Check your email for the reset link.'
     }
-  } catch (e) {
-    error.value = 'Account does not exist. Please try again.'
-  } finally {
-    loading.value = false
+  } catch (err) {
+    console.error('Unexpected error:', err)
+    error.value = 'Something went wrong. Please try again.'
   }
+
+  loading.value = false
 }
+
 </script>
 
 

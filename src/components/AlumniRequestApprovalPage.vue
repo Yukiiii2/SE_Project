@@ -36,7 +36,15 @@
           <input type="date" id="dateRequested" v-model="filters.dateRequested" />
         </div>
         <button @click="applyFilters">Apply Filters</button>
-      </section>
+      
+        <button 
+  @click="resetFilters"
+  :class="['reset-button', { active: isFilterActive }]"
+  :disabled="!isFilterActive"
+>
+  Reset
+</button>
+</section>
 
       <section class="requests-dashboard">
         <h2>All Requests</h2>
@@ -71,10 +79,14 @@
           <p><strong>Priority:</strong> {{ selectedRequest.priority }}</p>
           <p><strong>Date Needed:</strong> {{ selectedRequest.date_needed }}</p>
 
-          <div class="form-group">
-            <label>Search Candidates</label>
-            <input type="text" v-model="candidateSearch" placeholder="Search by name or expertise" />
-          </div>
+          <div class="request-search-box">
+  <i class="fas fa-search"></i>
+  <input 
+    type="text" 
+    v-model="candidateSearch" 
+    placeholder="Search by name or expertise" 
+  />
+</div>
 
           <!-- Scrollable candidate list -->
           <div class="scrollable-candidates">
@@ -112,9 +124,9 @@
         <div class="modal-content">
           <h2>Review and Approve</h2>
           <p><strong>Request:</strong> {{ selectedRequest.Request_title }}</p>
-          <p><strong>Assigned to:</strong> {{ selectedCandidate[0].alumni_Name }}</p>
+          <p><strong>Assigned to:</strong> {{ selectedCandidateNames }}</p>
           <p><strong>Expertise:</strong> {{ selectedCandidate[0].expertise }}</p>
-          <button @click="approveRequest">Approve</button>
+          <button @click="approveRequest" class="approve-button">Approve</button>
           <button @click="showReview = false">Cancel</button>
         </div>
       </div>
@@ -157,6 +169,15 @@ const applyFilters = () => {
     return statusMatch && dateMatch
   })
 }
+const isFilterActive = computed(() => {
+  return filters.value.status !== '' || filters.value.dateRequested !== ''
+})
+
+const resetFilters = () => {
+  filters.value.status = ''
+  filters.value.dateRequested = ''
+  applyFilters()
+}
 
 const viewRequest = (req) => {
   selectedRequest.value = req
@@ -173,28 +194,40 @@ const closeModal = () => {
 
 const approveRequest = async () => {
   const request = selectedRequest.value
-  const assigned = selectedCandidate.value[0]
+  const assigned = selectedCandidate.value
 
-  if (!request || !assigned) return
+  if (!request || assigned.length === 0) {
+    console.error('Missing request or assigned candidates')
+    return
+  }
 
-  const { error } = await supabase.from('request_table').update({
-    Status: 'Completed',
-    approved_at: new Date().toISOString(),
-    assigned_to: assigned.id // assuming id or uuid
-  }).eq('Request_ID', request.Request_ID)
+  const assignedAlumniIds = assigned.map(c => c.alumni_ID)
+
+  const { error } = await supabase
+    .from('request_table')
+    .update({
+      Status: 'Completed',
+      approved_at: new Date().toISOString(),
+      assigned_to: assignedAlumniIds,
+    })
+    .eq('Request_ID', request.Request_ID) // <-- must use Request_ID, NOT id
 
   if (error) {
     console.error('Failed to update request:', error)
   } else {
     request.Status = 'Completed'
     request.approved_at = new Date().toISOString()
-    request.assigned_to = assigned.id
+    request.assigned_to = assignedAlumniIds
     selectedRequest.value = null
+    selectedCandidate.value = [] // clear selection after approve
     showReview.value = false
     await fetchRequests()
   }
 }
 
+const selectedCandidateNames = computed(() => 
+  selectedCandidate.value.map(c => c.alumni_Name).join(', ')
+);
 const fetchRequests = async () => {
   const { data, error } = await supabase.from('request_table').select('*')
 
@@ -203,57 +236,18 @@ const fetchRequests = async () => {
     return
   }
 
-  if (!data || data.length === 0) {
-    const dummyRequests = [
-      {
-        Request_ID: 9991,
-        Requested_at: '2025-04-10',
-        Status: 'Pending',
-        Request_title: 'Install New Software',
-        description: 'We need new design tools for the team.',
-        tool_needed: 'Figma Pro',
-        technical_requirement: 'UI/UX, Web Design',
-        priority: 'High',
-        date_needed: '2025-04-20',
-        requester: 'Mico Ang'
-      },
-      {
-        Request_ID: 9992,
-        Requested_at: '2025-04-11',
-        Status: 'Pending',
-        Request_title: 'Setup Cloud Infrastructure',
-        description: 'Deploy services on scalable cloud environment.',
-        tool_needed: 'AWS EC2, S3',
-        technical_requirement: 'DevOps, AWS',
-        priority: 'Medium',
-        date_needed: '2025-04-25',
-        requester: 'Jane Cruz'
-      },
-      {
-        Request_ID: 9993,
-        Requested_at: '2025-04-12',
-        Status: 'Pending',
-        Request_title: 'Data Analysis Support',
-        description: 'Assistance needed in processing survey datasets.',
-        tool_needed: 'Python, Pandas',
-        technical_requirement: 'Data Science, Python',
-        priority: 'Low',
-        date_needed: '2025-05-01',
-        requester: 'Carlos Reyes'
-      }
-    ]
+  if (data) {
+    // Sort logic:
+    requests.value = data.sort((a, b) => {
+      // 1. Sort by Status: Pending first
+      if (a.Status === 'Pending' && b.Status !== 'Pending') return -1
+      if (a.Status !== 'Pending' && b.Status === 'Pending') return 1
 
-    const { error: insertError } = await supabase.from('request_table').insert(dummyRequests)
-    if (insertError) {
-      console.error('Failed to insert dummy requests:', insertError)
-      return
-    }
+      // 2. If same Status, sort by Requested_at (earlier first)
+      return new Date(a.Requested_at) - new Date(b.Requested_at)
+    })
 
-    requests.value = dummyRequests
-    filteredRequests.value = dummyRequests
-  } else {
-    requests.value = data
-    filteredRequests.value = data
+    filteredRequests.value = requests.value
   }
 }
 
@@ -674,12 +668,76 @@ button.secondary:hover {
 
 .button-group {
   display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* Apply Filters button */
+.button-group button:first-child {
+  background-color: #FF5C8E; /* Main pink color */
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.button-group button:first-child:hover {
+  background-color: #FF3366; /* Darker pink on hover */
 }
 
 .modal-content {
   max-height: 90vh;
   overflow-y: auto;
+}
+.reset-button {
+  background-color: #f0f0f0; /* Light gray default */
+  color: #aaa;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: not-allowed;
+  transition: background-color 0.3s ease;
+  margin-left: 12px; /* << Add this for spacing */
+}
+
+/* Reset active state */
+.reset-button.active {
+  background-color: #FF3366; /* Same pink as Apply Filters */
+  color: white;
+  cursor: pointer;
+}
+
+/* Hover effect */
+.reset-button.active:hover {
+  background-color: #FF3366;
+}
+.request-search-box {
+  display: flex;
+  align-items: center;
+  background-color: #ffe4ed; /* soft pink */
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  margin-top: 8px;
+  border: 1.5px solid #FF4B7E; /* strong pink border */
+}
+
+.request-search-box i {
+  color: #FF4B7E; /* matching icon color */
+  margin-right: 10px;
+  font-size: 16px;
+}
+
+.request-search-box input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  color: #333;
 }
 </style>
