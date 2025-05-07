@@ -1,144 +1,172 @@
-  <template>
-    <div class="homepage">
-      <!-- Sidebar -->
-      <aside class="sidebar">
-        <div class="logo">
-          <img src="../assets/logo.png" alt="Logo" />
-          <h2>Alumni Connect</h2>
+<template>
+  <div class="homepage">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="logo">
+        <img src="../assets/logo.jpg" alt="Logo" />
+        <h2>Marian TBI Connect</h2>
+      </div>
+      <nav class="nav-links">
+        <router-link to="/home" class="nav-item">
+          <i class="fas fa-home"></i><span>Home</span>
+        </router-link>
+        <router-link to="/contacts" class="nav-item">
+          <i class="fas fa-address-book"></i><span>Contacts</span>
+        </router-link>
+        <router-link to="/events" class="nav-item active">
+          <i class="fas fa-calendar"></i><span>Events</span>
+        </router-link>
+        <router-link to="/archive" class="nav-item">
+          <i class="fas fa-envelope"></i><span>Archives</span>
+        </router-link>
+        <router-link to="/approve-requests" class="nav-item">
+          <i class="fas fa-envelope"></i><span>Requests</span>
+        </router-link>
+      </nav>
+      <a href="#" class="logout" @click.prevent="handleLogout">
+        <i class="fas fa-sign-out-alt"></i><span>Logout</span>
+      </a>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Stats -->
+      <section class="stats-cards">
+        <div class="card">
+          <div class="card-icon pink"><i class="fas fa-calendar"></i></div>
+          <h3>Total Events</h3>
+          <p>{{ events.length || 0 }}</p>
         </div>
-        <nav class="nav-links">
-          <router-link to="/home" class="nav-item">
-            <i class="fas fa-home"></i><span>Home</span>
-          </router-link>
-          <router-link to="/contacts" class="nav-item">
-            <i class="fas fa-address-book"></i><span>Contacts</span>
-          </router-link>
-          <router-link to="/events" class="nav-item active">
-            <i class="fas fa-calendar"></i><span>Events</span>
-          </router-link>
-          <router-link to="/approve-requests" class="nav-item">
-            <i class="fas fa-envelope"></i><span>Requests</span>
-          </router-link>
-        </nav>
-        <a href="#" class="logout" @click.prevent="handleLogout">
-          <i class="fas fa-sign-out-alt"></i><span>Logout</span>
-        </a>
-      </aside>
+        <div class="card">
+          <div class="card-icon green"><i class="fas fa-user-check"></i></div>
+          <h3>Active Events</h3>
+          <p>{{ activeEvents || 0 }}</p>
+        </div>
+        <div class="card">
+          <div class="card-icon green"><i class="fas fa-user-check"></i></div>
+          <h3>Complete Events</h3>
+          <p>{{ completedEvents || 0 }}</p>
+        </div>
+        <div class="card">
+          <div class="card-icon purple"><i class="fas fa-users"></i></div>
+          <h3>Total Attendees</h3>
+          <p>{{ totalAttendees || 0 }}</p>
+        </div>
+      </section>
 
-      <!-- Main Content -->
-      <main class="main-content">
-        <!-- Stats -->
-        <section class="stats-cards">
-          <div class="card">
-            <div class="card-icon pink"><i class="fas fa-calendar"></i></div>
-            <h3>Total Events</h3>
-            <p>{{ events.length || 0 }}</p>
+      <!-- Event List & Filter -->
+      <section class="events-section">
+        <div class="section-header">
+          <div>
+            <h2>Event Management</h2>
+            <p>View and manage your events</p>
           </div>
-          <div class="card">
-            <div class="card-icon green"><i class="fas fa-user-check"></i></div>
-            <h3>Active Events</h3>
-            <p>{{ activeEvents || 0 }}</p>
-          </div>
-          <div class="card">
-            <div class="card-icon purple"><i class="fas fa-users"></i></div>
-            <h3>Total Attendees</h3>
-            <p>{{ totalAttendees || 0 }}</p>
-          </div>
-        </section>
+          <button class="create-button" @click="showCreateEventModal">
+            <i class="fas fa-plus"></i> Create Event
+          </button>
+        </div>
 
-        <!-- Event List & Filter -->
-        <section class="events-section">
-          <div class="section-header">
-            <div>
-              <h2>Event Management</h2>
-              <p>View and manage your events</p>
-            </div>
-            <button class="create-button" @click="showCreateEventModal">
-              <i class="fas fa-plus"></i> Create Event
-            </button>
+        <div class="filter-bar">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Search events..." v-model="searchQuery" />
           </div>
+          <select v-model="selectedEventType" class="filter-select">
+            <option value="">All Types</option>
+            <option v-for="type in eventTypes" :key="type" :value="type">
+              {{ formatEventType(type) }}
+            </option>
+          </select>
+        </div>
 
-          <div class="filter-bar">
-            <div class="search-box">
-              <i class="fas fa-search"></i>
-              <input type="text" placeholder="Search events..." v-model="searchQuery" />
-            </div>
-            <select v-model="selectedEventType" class="filter-select">
-              <option value="">All Types</option>
-              <option v-for="type in eventTypes" :key="type" :value="type">
-                {{ formatEventType(type) }}
-              </option>
-            </select>
-          </div>
-
-          <!-- Event Cards -->
-          <div class="events-grid">
-            <div v-for="event in paginatedEvents" :key="event.id" class="event-card">
-              <div class="event-date">
-                <span class="day">{{ formatDate(event.dateFrom).day }}</span>
-                <span class="month">{{ formatDate(event.dateFrom).month }}</span>
-                <span class="year">{{ formatDate(event.dateFrom).year }}</span>
-              </div>
-              <div class="event-details">
-                <h3>{{ event.name }}</h3>
-                <span class="event-time">
-                  <i class="fas fa-clock"></i>
-                  {{ formatDate(event.dateFrom).month }} {{ formatDate(event.dateFrom).day }} to
-                  {{ formatDate(event.dateTo).month }} {{ formatDate(event.dateTo).day }}
-                </span>
-                <span class="event-type">{{ formatEventType(event.event_type) }}</span>
-                <span class="event-venue">
-                  <i class="fas fa-map-marker-alt"></i> {{ event.venue || 'No Venue' }}
-                </span>
-              </div>
-              <div class="event-actions">
-                <button class="delete-btn" @click="deleteEvent(event.id)">
-                  <i class="fas fa-trash"></i> Delete Event
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pagination -->
-          <div class="pagination" v-if="totalPages > 1">
-            <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1">Previous</button>
-            <span>Page {{ currentPage }} of {{ totalPages }}</span>
-            <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages">Next</button>
-          </div>
-        </section>
-
-        <!-- Calendar -->
-  <section class="calendar-section">
-    <vue-cal
-    style="height: 600px"
-    :events="calendarEvents"
-    default-view="week"
-    :disable-views="['years', 'year', 'month']"
-    @event-click="handleEventClick"
+        <!-- Event Cards -->
+<div class="events-grid">
+  <div
+    v-for="event in paginatedEvents"
+    :key="event.id"
+    class="event-card"
+    :class="{ 'completed-event': new Date(event.dateTo) < new Date() }"
   >
-    <template #event="props">
-      <div class="custom-event" @click.stop="handleEventClick(props)">
-        <strong>{{ props.event.title || 'No Title' }}</strong>
-        <p>{{ props.event.content }}</p>
-      </div>
-    </template>
-  </vue-cal>
-  </section>
-      </main>
+    <div class="event-date">
+      <span class="day">{{ formatDate(event.dateFrom).day }}</span>
+      <span class="month">{{ formatDate(event.dateFrom).month }}</span>
+      <span class="year">{{ formatDate(event.dateFrom).year }}</span>
+    </div>
+    <div class="event-details">
+      <h3>
+  {{ event.name }}
+  <span
+    v-if="new Date(event.dateTo) < new Date()"
+    class="status-complete"
+  >
+    Completed
+  </span>
+</h3>
+      <span class="event-time">
+        <i class="fas fa-clock"></i>
+        {{ formatDate(event.dateFrom).month }} {{ formatDate(event.dateFrom).day }} to
+        {{ formatDate(event.dateTo).month }} {{ formatDate(event.dateTo).day }}
+      </span>
+      <span class="event-type">{{ formatEventType(event.event_type) }}</span>
+      <span class="event-venue">
+        <i class="fas fa-map-marker-alt"></i> {{ event.venue || 'No Venue' }}
+      </span>
+      <span v-if="new Date(event.dateTo) < new Date()" class="event-status completed">
+        <i class="fas fa-check-circle"></i> 
+      </span>
+    </div>
+    <div class="event-actions">
+      <button
+        v-if="new Date(event.dateTo) >= new Date()"
+        class="edit-btn"
+        @click="editEvent(event)"
+      >
+        <i class="fas fa-edit"></i> Edit Event
+      </button>
+    </div>
+  </div>
+</div>
 
-      <!-- Calendar Event Detail Modal -->
-      <div v-if="isEventDetailModalVisible" class="modal">
-        <div class="modal-content">
-      <h2>{{ selectedEventDetail.name }}</h2>
-      <p><strong>Venue:</strong> {{ selectedEventDetail.venue || 'N/A' }}</p>
-      <p><strong>Event Type:</strong> {{ formatEventType(selectedEventDetail.event_type) }}</p>
-      <p><strong>Date From:</strong> {{ formatDate(selectedEventDetail.dateFrom).month }} {{ formatDate(selectedEventDetail.dateFrom).day }}, {{ formatDate(selectedEventDetail.dateFrom).year }}</p>
-      <p><strong>Date To:</strong> {{ formatDate(selectedEventDetail.dateTo).month }} {{ formatDate(selectedEventDetail.dateTo).day }}, {{ formatDate(selectedEventDetail.dateTo).year }}</p>
-      <div class="modal-actions">
-        <button @click="isEventDetailModalVisible = false">Close</button>
-          </div>
+        <!-- Pagination -->
+        <div class="pagination" v-if="totalPages > 1">
+          <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1">Previous</button>
+          <span>Page {{ currentPage }} of {{ totalPages }}</span>
+          <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages">Next</button>
+        </div>
+      </section>
+
+      <!-- Calendar -->
+      <section class="calendar-section">
+        <vue-cal
+          style="height: 600px"
+          :events="calendarEvents"
+          default-view="week"
+          :disable-views="['years', 'year', 'month']"
+          @event-click="handleEventClick"
+        >
+          <template #event="props">
+            <div class="custom-event" @click.stop="handleEventClick(props)">
+              <strong>{{ props.event.title || 'No Title' }}</strong>
+              <p>{{ props.event.content }}</p>
+            </div>
+          </template>
+        </vue-cal>
+      </section>
+    </main>
+
+    <!-- Calendar Event Detail Modal -->
+    <div v-if="isEventDetailModalVisible" class="modal">
+      <div class="modal-content">
+        <h2>{{ selectedEventDetail.name }}</h2>
+        <p><strong>Venue:</strong> {{ selectedEventDetail.venue || 'N/A' }}</p>
+        <p><strong>Event Type:</strong> {{ formatEventType(selectedEventDetail.event_type) }}</p>
+        <p><strong>Date From:</strong> {{ formatDate(selectedEventDetail.dateFrom).month }} {{ formatDate(selectedEventDetail.dateFrom).day }}, {{ formatDate(selectedEventDetail.dateFrom).year }}</p>
+        <p><strong>Date To:</strong> {{ formatDate(selectedEventDetail.dateTo).month }} {{ formatDate(selectedEventDetail.dateTo).day }}, {{ formatDate(selectedEventDetail.dateTo).year }}</p>
+        <div class="modal-actions">
+          <button @click="isEventDetailModalVisible = false">Close</button>
         </div>
       </div>
+    </div>
 
       <!-- Create Event Modal -->
       <div v-if="isCreateModalVisible" class="modal">
@@ -207,265 +235,282 @@
 
 
 
-  <script setup>
-  import { ref, computed, onMounted } from 'vue'
-  import { useRouter } from 'vue-router'
-  import VueCal from 'vue-cal'
-  import 'vue-cal/dist/vuecal.css'
-  import { supabase } from '../lib/supabaseClient'
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import VueCal from 'vue-cal'
+import 'vue-cal/dist/vuecal.css'
+import { supabase } from '../lib/supabaseClient'
 
-  const router = useRouter()
-  const events = ref([])
-  const calendarEvents = ref([])
-  const alumni = ref([])
-  const inviteSearch = ref('')
-  const eventTypes = ref([])
+const router = useRouter()
+const events = ref([])
+const calendarEvents = ref([])
+const alumni = ref([])
+const inviteSearch = ref('')
+const eventTypes = ref([])
+const today = new Date().toISOString().split('T')[0]
+const searchQuery = ref('')
+const selectedEventType = ref('')
+const currentPage = ref(1)
+const pageSize = 6
 
-  const today = new Date().toISOString().split('T')[0]
-  const searchQuery = ref('')
-  const selectedEventType = ref('')
-  const currentPage = ref(1)
-  const pageSize = 6
+const isCreateModalVisible = ref(false)
+const isAddingNewType = ref(false)
+const newEventType = ref('')
+const isEventDetailModalVisible = ref(false)
+const selectedEventDetail = ref(null)
 
-  const isCreateModalVisible = ref(false)
-  const isAddingNewType = ref(false)
-  const newEventType = ref('')
-  const isEventDetailModalVisible = ref(false)
-  const selectedEventDetail = ref(null)
+const isEditing = ref(false)
+const editingEventId = ref(null)
 
-  const newEvent = ref({
+const newEvent = ref({
+  name: '',
+  venue: '',
+  dateFrom: '',
+  dateTo: '',
+  type: '',
+  invitedAlumni: []
+})
+
+const formatEventType = (type) =>
+  type ? type.charAt(0).toUpperCase() + type.slice(1) : 'Unknown'
+
+const activeEvents = computed(() =>
+  events.value.filter((e) => new Date(e.dateTo) >= new Date()).length
+)
+
+const completedEvents = computed(() =>
+  events.value.filter((e) => new Date(e.dateTo) < new Date()).length
+)
+
+const totalAttendees = computed(() =>
+  events.value.reduce((acc, e) => acc + (e.invited_count || 0), 0)
+)
+
+const filteredEvents = computed(() =>
+  events.value.filter((event) => {
+    const search = searchQuery.value.toLowerCase()
+    const isMatch =
+      event.name?.toLowerCase().includes(search) ||
+      event.venue?.toLowerCase().includes(search) ||
+      formatEventType(event.event_type).toLowerCase().includes(search)
+
+    const isTypeMatch =
+      !selectedEventType.value || event.event_type === selectedEventType.value
+
+    return isMatch && isTypeMatch
+  })
+)
+
+const paginatedEvents = computed(() => {
+  const start = (currentPage.value - 1) * pageSize
+  return filteredEvents.value
+    .filter(e => {
+      const isActive = new Date(e.dateTo) >= new Date()
+      const isSearchedOrFiltered = searchQuery.value || selectedEventType.value
+      return isActive || isSearchedOrFiltered
+    })
+    .slice(start, start + pageSize)
+})
+
+const totalPages = computed(() =>
+  Math.ceil(
+    filteredEvents.value.filter(e =>
+      new Date(e.dateTo) >= new Date() || searchQuery.value || selectedEventType.value
+    ).length / pageSize
+  )
+)
+
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) currentPage.value = page
+}
+
+const formatDate = (dateStr) => {
+  const date = new Date(dateStr)
+  return isNaN(date.getTime())
+    ? { day: 'N/A', month: 'N/A', year: 'N/A' }
+    : {
+        day: date.getDate(),
+        month: date.toLocaleString('default', { month: 'short' }).toUpperCase(),
+        year: date.getFullYear()
+      }
+}
+
+const fetchEvents = async () => {
+  const { data, error } = await supabase
+    .from('events')
+    .select('id, name, venue, date_from, date_to, event_type, invited_count')
+
+  if (error || !data) return console.error('Error fetching events:', error)
+
+  events.value = data.map((event) => ({
+    id: event.id,
+    name: event.name,
+    venue: event.venue,
+    dateFrom: event.date_from,
+    dateTo: event.date_to,
+    event_type: event.event_type,
+    invited_count: event.invited_count
+  }))
+
+  calendarEvents.value = events.value.map((event) => ({
+    id: event.id,
+    title: event.name,
+    content: formatEventType(event.event_type),
+    start: new Date(event.dateFrom),
+    end: new Date(event.dateTo),
+    venue: event.venue,
+    event_type: event.event_type,
+    dateFrom: event.dateFrom,
+    dateTo: event.dateTo
+  }))
+}
+
+const fetchAlumni = async () => {
+  const { data, error } = await supabase
+    .from('alumni_table')
+    .select('alumni_ID, alumni_Name, Email')
+  if (!error && data) {
+    alumni.value = data.map((a) => ({
+      id: a.alumni_ID,
+      name: a.alumni_Name,
+      email: a.Email
+    }))
+  }
+}
+
+const filteredAlumni = computed(() => {
+  const keyword = inviteSearch.value.toLowerCase()
+  return alumni.value.filter((a) =>
+    a.name.toLowerCase().includes(keyword) ||
+    a.email.toLowerCase().includes(keyword)
+  )
+})
+
+const fetchEventTypes = async () => {
+  const { data } = await supabase.from('event_types').select('name')
+  if (data) eventTypes.value = [...new Set(data.map((e) => e.name))]
+}
+
+const showCreateEventModal = () => {
+  isCreateModalVisible.value = true
+  isEditing.value = false
+}
+
+const hideCreateEventModal = () => {
+  isCreateModalVisible.value = false
+  isAddingNewType.value = false
+  newEventType.value = ''
+  isEditing.value = false
+  editingEventId.value = null
+  newEvent.value = {
     name: '',
     venue: '',
     dateFrom: '',
     dateTo: '',
     type: '',
     invitedAlumni: []
-  })
-
-  const formatEventType = (type) =>
-    type ? type.charAt(0).toUpperCase() + type.slice(1) : 'Unknown'
-
-  const activeEvents = computed(() =>
-    events.value.filter((e) => new Date(e.dateTo) >= new Date()).length
-  )
-
-  const totalAttendees = computed(() =>
-    events.value.reduce((acc, e) => acc + (e.invited_count || 0), 0)
-  )
-
-  const filteredEvents = computed(() =>
-    events.value.filter((event) => {
-      const matchName = event.name?.toLowerCase().includes(searchQuery.value.toLowerCase())
-      const matchVenue = event.venue?.toLowerCase().includes(searchQuery.value.toLowerCase())
-      const matchTypeText = formatEventType(event.event_type).toLowerCase().includes(searchQuery.value.toLowerCase())
-      const matchType = !selectedEventType.value || event.event_type === selectedEventType.value
-      return (matchName || matchVenue || matchTypeText) && matchType
-    })
-  )
-
-  const paginatedEvents = computed(() => {
-    const start = (currentPage.value - 1) * pageSize
-    return filteredEvents.value.slice(start, start + pageSize)
-  })
-
-  const totalPages = computed(() =>
-    Math.ceil(filteredEvents.value.length / pageSize)
-  )
-
-  const goToPage = (page) => {
-    if (page >= 1 && page <= totalPages.value) currentPage.value = page
-  }
-
-  const formatDate = (dateStr) => {
-    const date = new Date(dateStr)
-    if (isNaN(date.getTime())) return { day: 'N/A', month: 'N/A', year: 'N/A' }
-    return {
-      day: date.getDate(),
-      month: date.toLocaleString('default', { month: 'short' }).toUpperCase(),
-      year: date.getFullYear()
-    }
-  }
-
-  const fetchEvents = async () => {
-    const { data, error } = await supabase
-      .from('events')
-      .select('id, name, venue, date_from, date_to, event_type, invited_count')
-
-    if (error || !data) return console.error('Error fetching events:', error)
-
-    events.value = data
-      .map((event) => ({
-        id: event.id,
-        name: event.name,
-        venue: event.venue,
-        dateFrom: event.date_from,
-        dateTo: event.date_to,
-        event_type: event.event_type,
-        invited_count: event.invited_count
-      }))
-      .sort((a, b) => new Date(a.dateFrom) - new Date(b.dateFrom)) // ✅ soonest first
-
-    calendarEvents.value = events.value.map((event) => ({
-      id: event.id,
-      title: event.name || 'Untitled',
-      content: formatEventType(event.event_type),
-      start: new Date(event.dateFrom),
-      end: new Date(event.dateTo),
-      venue: event.venue,
-      event_type: event.event_type,
-      dateFrom: event.dateFrom,
-      dateTo: event.dateTo
-    }))
-  }
-
-  const fetchAlumni = async () => {
-    const { data, error } = await supabase
-      .from('alumni_table')
-      .select('alumni_ID, alumni_Name, Email')
-    if (!error && data) {
-      alumni.value = data.map((a) => ({
-        id: a.alumni_ID,
-        name: a.alumni_Name,
-        email: a.Email
-      }))
-    }
-  }
-  const filteredAlumni = computed(() => {
-  const keyword = inviteSearch.value.toLowerCase()
-  return alumni.value.filter(a =>
-    a.name.toLowerCase().includes(keyword) ||
-    a.email.toLowerCase().includes(keyword)
-  )
-})
-
-  const fetchEventTypes = async () => {
-    const { data } = await supabase.from('event_types').select('name')
-    if (data) eventTypes.value = [...new Set(data.map((e) => e.name))]
-  }
-
-  const showCreateEventModal = () => {
-    isCreateModalVisible.value = true
-  }
-
-  const hideCreateEventModal = () => {
-    isCreateModalVisible.value = false
-    isAddingNewType.value = false
-    newEventType.value = ''
-    newEvent.value = {
-      name: '',
-      venue: '',
-      dateFrom: '',
-      dateTo: '',
-      type: '',
-      invitedAlumni: []
-    }
-  }
-
-  const checkAddNewType = () => {
-    if (newEvent.value.type === 'add-new') {
-      isAddingNewType.value = true
-      newEvent.value.type = ''
-    }
-  }
-
-  const confirmNewType = async () => {
-    if (!newEventType.value.trim()) return
-    await supabase.from('event_types').insert([
-      { name: newEventType.value.trim().toLowerCase() }
-    ])
-    await fetchEventTypes()
-    newEvent.value.type = newEventType.value.trim().toLowerCase()
-    isAddingNewType.value = false
-    newEventType.value = ''
-  }
-
-  const cancelNewType = () => {
-    isAddingNewType.value = false
-    newEventType.value = ''
-  }
-
-  const createEvent = async () => {
-    try {
-      const invitedAlumni = [...newEvent.value.invitedAlumni]
-      const { data: createdEvent, error: eventError } = await supabase
-        .from('events')
-        .insert([{
-          name: newEvent.value.name,
-          venue: newEvent.value.venue,
-          date_from: newEvent.value.dateFrom,
-          date_to: newEvent.value.dateTo,
-          event_type: newEvent.value.type,
-          invited_count: invitedAlumni.length
-        }])
-        .select()
-
-      if (eventError || !createdEvent?.[0])
-        throw new Error(eventError?.message || 'Insert failed')
-
-      const eventId = createdEvent[0].id
-
-      await supabase.from('calendar_events').insert([{
-        event_id: eventId,
-        start: new Date(newEvent.value.dateFrom).toISOString(),
-        end: new Date(newEvent.value.dateTo).toISOString(),
-        title: newEvent.value.name,
-        content: newEvent.value.type
-      }])
-
-      await fetchEvents()
-      hideCreateEventModal()
-      alert('Event created successfully!')
-    } catch (err) {
-      console.error('Create event failed:', err)
-      alert('Something went wrong while creating the event.')
-    }
-  }
-
-  const deleteEvent = async (id) => {
-  const { error } = await supabase.from('events').delete().eq('id', id)
-  if (!error) {
-    await fetchEvents()
-
-    // After fetching events again, check if the current page is now empty
-    const start = (currentPage.value - 1) * pageSize
-    const currentItems = filteredEvents.value.slice(start, start + pageSize)
-
-    if (currentItems.length === 0 && currentPage.value > 1) {
-      // Go back one page if no items left
-      currentPage.value -= 1
-    }
   }
 }
-  const handleLogout = () => {
-    localStorage.removeItem('user')
-    router.push('/')
+
+const checkAddNewType = () => {
+  if (newEvent.value.type === 'add-new') {
+    isAddingNewType.value = true
+    newEvent.value.type = ''
   }
+}
 
-  const handleEventClick = (eventObject) => {
-    const event = eventObject?.event
+const confirmNewType = async () => {
+  if (!newEventType.value.trim()) return
+  await supabase.from('event_types').insert([
+    { name: newEventType.value.trim().toLowerCase() }
+  ])
+  await fetchEventTypes()
+  newEvent.value.type = newEventType.value.trim().toLowerCase()
+  isAddingNewType.value = false
+  newEventType.value = ''
+}
 
-    if (!event || !event.title) {
-      console.warn('Missing event data:', event)
-      return
+const cancelNewType = () => {
+  isAddingNewType.value = false
+  newEventType.value = ''
+}
+
+const createEvent = async () => {
+  try {
+    const payload = {
+      name: newEvent.value.name,
+      venue: newEvent.value.venue,
+      date_from: newEvent.value.dateFrom,
+      date_to: newEvent.value.dateTo,
+      event_type: newEvent.value.type,
+      invited_count: newEvent.value.invitedAlumni.length
     }
 
-    selectedEventDetail.value = {
-      name: event.title,
-      venue: event.venue,
-      dateFrom: event.dateFrom,
-      dateTo: event.dateTo,
-      event_type: event.event_type
+    let response
+    let wasEditing = isEditing.value  // <-- capture this before hiding modal
+
+    if (isEditing.value && editingEventId.value) {
+      response = await supabase
+        .from('events')
+        .update(payload)
+        .eq('id', editingEventId.value)
+    } else {
+      response = await supabase.from('events').insert([payload])
     }
 
-    isEventDetailModalVisible.value = true
-  }
+    if (response.error) throw new Error(response.error.message)
 
-  onMounted(() => {
-    fetchAlumni()
-    fetchEventTypes()
-    fetchEvents()
-  })
-  </script>
+    await fetchEvents()
+    hideCreateEventModal()
+
+    // Show correct alert
+    alert(wasEditing ? 'Event updated successfully!' : 'Event created successfully!')
+  } catch (err) {
+    console.error('Save event failed:', err)
+    alert('Something went wrong.')
+  }
+}
+
+const editEvent = (event) => {
+  isEditing.value = true        // move this here
+  editingEventId.value = event.id
+  newEvent.value = {
+    name: event.name,
+    venue: event.venue,
+    dateFrom: event.dateFrom,
+    dateTo: event.dateTo,
+    type: event.event_type,
+    invitedAlumni: [] // optional: preload invited alumni
+  }
+  isCreateModalVisible.value = true
+}
+
+const handleLogout = () => {
+  localStorage.removeItem('user')
+  router.push('/')
+}
+
+const handleEventClick = (eventObject) => {
+  const event = eventObject?.event
+  if (!event || !event.title) return
+  selectedEventDetail.value = {
+    name: event.title,
+    venue: event.venue,
+    dateFrom: event.dateFrom,
+    dateTo: event.dateTo,
+    event_type: event.event_type
+  }
+  isEventDetailModalVisible.value = true
+}
+
+onMounted(() => {
+  fetchAlumni()
+  fetchEventTypes()
+  fetchEvents()
+})
+</script>
+
 
 
 
@@ -508,15 +553,18 @@ body, html {
 .logo {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 10px;
   margin-top: 80px;
   margin-bottom: 40px;
 }
 
 .logo img {
   width: 45px;
-  height: auto;
-  filter: brightness(0) invert(1);
+  height: 45px;
+  padding: 6px;
+  background-color: white;
+  border-radius: 10px;
+  object-fit: contain;
 }
 
 .logo h2 {
@@ -816,7 +864,7 @@ body, html {
   gap: 8px;
   justify-content: center;
 }
-.delete-btn {
+.edit-btn {
   background: #ff4b7c;
   color: white;
   border: none;
@@ -826,7 +874,7 @@ body, html {
   font-size: 16px;
   transition: all 0.3s ease;
 }
-.delete-btn:hover {
+.edit-btn:hover {
   background: #ff1c55;
 }
 
@@ -1202,5 +1250,14 @@ body, html {
   background: transparent;
   font-size: 14px;
   color: #333;
+}
+.status-complete {
+  background-color: #28a745;
+  color: white;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 10px;
+  vertical-align: middle;
 }
 </style>

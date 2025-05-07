@@ -1,6 +1,6 @@
 <template>
   <div class="contact-management">
-    <!-- Sidebar Toggle Button -->
+    <!-- Sidebar Toggle -->
     <button class="menu-btn" @click="toggleSidebar">
       {{ isSidebarOpen ? "✕" : "☰" }}
     </button>
@@ -9,8 +9,8 @@
     <aside :class="{ open: isSidebarOpen }" class="sidebar">
       <div class="sidebar-header">
         <div class="logo">
-          <img src="../assets/logo.png" alt="Logo" />
-          <h2>Alumni Connect</h2>
+          <img src="../assets/logo.jpg" alt="Logo" />
+          <h2>Marian TBI Connect</h2>
         </div>
       </div>
       <nav class="nav-links">
@@ -25,65 +25,41 @@
 
     <!-- Main Content -->
     <div class="main-content">
-      <h1>Archived Contacts</h1>
-
-      <!-- Action Buttons -->
-      <div class="actions">
-        <button :disabled="!selectedContacts.length" @click="restoreContacts">Restore</button>
-        <button :disabled="!selectedContacts.length" @click="permanentDeleteContacts">Permanent Delete</button>
-      </div>
-
-      <!-- Filter Tab -->
-      <div class="filter-tab">
-        <h3>Filters</h3>
-        <label>
-          Filter by:
-          <select v-model="filterKey">
-            <option value="all">All</option>
-            <option value="alumniId">Alumni ID</option>
-            <option value="name">Name</option>
-            <option value="college">College</option>
-            <option value="program">Program</option>
-            <option value="email">Email</option>
-            <option value="status">Status</option>
-          </select>
-        </label>
-        <input v-model="filterValue" type="text" placeholder="Enter filter value..." />
-      </div>
+      <h1>Archived Events</h1>
 
       <!-- Search Bar -->
-      <input v-model="searchTerm" type="text" placeholder="Search contacts..." class="search-bar" />
+      <div class="actions">
+        <input v-model="searchQuery" type="text" placeholder="Search archived events..." class="search-bar" />
+      </div>
 
-      <!-- Contacts Table -->
-      <table>
-        <thead>
-          <tr>
-            <th><input type="checkbox" @change="toggleSelectAll" /></th>
-            <th>Alumni ID</th>
-            <th>Name</th>
-            <th>College</th>
-            <th>Program</th>
-            <th>Email</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="contact in paginatedContacts" :key="contact.id">
-            <td><input type="checkbox" v-model="selectedContacts" :value="contact.id" @click.stop /></td>
-            <td>{{ contact.alumniId }}</td>
-            <td @click="$router.push({ name: 'ContactDetail', params: { id: contact.id } })" class="clickable-name">
-              {{ contact.name }}
-            </td>
-            <td>{{ contact.college }}</td>
-            <td>{{ contact.program }}</td>
-            <td>{{ contact.email }}</td>
-            <td><span :class="'status-badge ' + contact.status.toLowerCase()">{{ contact.status }}</span></td>
-          </tr>
-        </tbody>
-      </table>
+      <!-- Archived Event Cards -->
+<div class="events-grid">
+  <div v-for="event in paginatedEvents" :key="event.id" class="event-card">
+    <div class="event-date">
+      <span class="day">{{ formatDateParts(event.dateFrom).day }}</span>
+      <span class="month">{{ formatDateParts(event.dateFrom).month }}</span>
+      <span class="year">{{ formatDateParts(event.dateFrom).year }}</span>
+    </div>
+    <div class="event-details">
+      <h3>
+        {{ event.name }}
+        <span class="status-complete">Completed</span>
+      </h3>
+      <span class="event-time">
+        <i class="fas fa-clock"></i>
+        {{ formatDateParts(event.dateFrom).month }} {{ formatDateParts(event.dateFrom).day }} to
+        {{ formatDateParts(event.dateTo).month }} {{ formatDateParts(event.dateTo).day }}
+      </span>
+      <span class="event-type">{{ formatEventType(event.event_type) }}</span>
+      <span class="event-venue">
+        <i class="fas fa-map-marker-alt"></i> {{ event.venue || 'No Venue' }}
+      </span>
+    </div>
+  </div>
+</div>
 
       <!-- Pagination -->
-      <div class="pagination">
+      <div class="pagination" v-if="totalPages > 1">
         <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1">Previous</button>
         <span>Page {{ currentPage }} of {{ totalPages }}</span>
         <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages">Next</button>
@@ -92,94 +68,84 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: "ArchiveManagement",
-  data() {
-    return {
-      contacts: [],
-      searchTerm: "",
-      selectedContacts: [],
-      currentPage: 1,
-      pageSize: 10,
-      isSidebarOpen: false,
-      filterKey: "all", // Default filter key
-      filterValue: "", // Filter value
-    };
-  },
-  computed: {
-    filteredContacts() {
-      const search = this.searchTerm.toLowerCase();
-      return this.contacts.filter(contact => {
-        const matchesSearch = Object.values(contact).some(val =>
-          typeof val === "string" && val.toLowerCase().includes(search)
-        );
-        const matchesFilter = this.filterKey === "all" || !this.filterValue
-          ? Object.values(contact).some(val =>
-              typeof val === "string" && val.toLowerCase().includes(this.filterValue.toLowerCase())
-            )
-          : contact[this.filterKey] && contact[this.filterKey].toLowerCase().includes(this.filterValue.toLowerCase());
-        return matchesSearch && matchesFilter;
-      });
-    },
-    totalPages() {
-      return Math.ceil(this.filteredContacts.length / this.pageSize);
-    },
-    paginatedContacts() {
-      const start = (this.currentPage - 1) * this.pageSize;
-      return this.filteredContacts.slice(start, start + this.pageSize);
-    },
-  },
-  methods: {
-    toggleSidebar() {
-      this.isSidebarOpen = !this.isSidebarOpen;
-    },
-    handleLogout() {
-      localStorage.removeItem("user");
-      this.$router.push("/");
-    },
-    goToPage(page) {
-      if (page >= 1 && page <= this.totalPages) {
-        this.currentPage = page;
-      }
-    },
-    toggleSelectAll(event) {
-      this.selectedContacts = event.target.checked ? this.paginatedContacts.map(c => c.id) : [];
-    },
-    restoreContacts() {
-      if (!this.selectedContacts.length) return;
 
-      const activeContacts = JSON.parse(localStorage.getItem("contacts") || "[]");
-      const toRestore = this.contacts.filter(c => this.selectedContacts.includes(c.id));
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { supabase } from '../lib/supabaseClient'
 
-      // Move to active contacts
-      const updatedActiveContacts = [...activeContacts, ...toRestore];
-      localStorage.setItem("contacts", JSON.stringify(updatedActiveContacts));
+const router = useRouter()
+const isSidebarOpen = ref(false)
+const searchQuery = ref('')
+const currentPage = ref(1)
+const pageSize = 6
+const archivedEvents = ref([])
 
-      // Remove from archived contacts
-      this.contacts = this.contacts.filter(c => !this.selectedContacts.includes(c.id));
-      localStorage.setItem("archivedContacts", JSON.stringify(this.contacts));
+const toggleSidebar = () => isSidebarOpen.value = !isSidebarOpen.value
 
-      this.selectedContacts = [];
-    },
-    permanentDeleteContacts() {
-      if (!this.selectedContacts.length) return;
+const handleLogout = () => {
+  localStorage.removeItem('user')
+  router.push('/')
+}
 
-      // Remove from archived contacts
-      this.contacts = this.contacts.filter(c => !this.selectedContacts.includes(c.id));
-      localStorage.setItem("archivedContacts", JSON.stringify(this.contacts));
+const formatEventType = (type) =>
+  type ? type.charAt(0).toUpperCase() + type.slice(1) : 'Unknown'
 
-      this.selectedContacts = [];
-    },
-  },
-  created() {
-    const savedContacts = localStorage.getItem("archivedContacts");
-    if (savedContacts) {
-      this.contacts = JSON.parse(savedContacts);
-    }
-  },
-};
+const formatDateParts = (dateStr) => {
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return { day: 'N/A', month: 'N/A', year: 'N/A' }
+  return {
+    day: date.getDate(),
+    month: date.toLocaleString('default', { month: 'short' }).toUpperCase(),
+    year: date.getFullYear()
+  }
+}
+
+const filteredArchivedEvents = computed(() => {
+  const search = searchQuery.value.toLowerCase()
+  return archivedEvents.value.filter(event =>
+    event.name.toLowerCase().includes(search) ||
+    event.venue.toLowerCase().includes(search) ||
+    formatEventType(event.event_type).toLowerCase().includes(search)
+  )
+})
+
+const paginatedEvents = computed(() => {
+  const start = (currentPage.value - 1) * pageSize
+  return filteredArchivedEvents.value.slice(start, start + pageSize)
+})
+
+const totalPages = computed(() =>
+  Math.ceil(filteredArchivedEvents.value.length / pageSize)
+)
+
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) currentPage.value = page
+}
+
+const fetchArchivedEvents = async () => {
+  const { data, error } = await supabase
+    .from('events')
+    .select('id, name, venue, date_from, date_to, event_type')
+    .lte('date_to', new Date().toISOString())
+
+  if (data) {
+    archivedEvents.value = data.map(e => ({
+      ...e,
+      dateFrom: e.date_from,
+      dateTo: e.date_to
+    }))
+  }
+
+  if (error) console.error('Fetch archived events failed:', error)
+}
+
+onMounted(() => {
+  fetchArchivedEvents()
+})
 </script>
+
+
 
 <style scoped>
 .contact-management {
@@ -193,7 +159,7 @@ export default {
 .sidebar {
   width: 180px;
   height: 100vh;
-  background: linear-gradient(180deg, #FF4B6E 0%, #E63456 100%);
+  background: linear-gradient(180deg, #ff4b7c 0%, #ff1c55 100%);
   color: white;
   position: fixed;
   top: 0;
@@ -222,20 +188,22 @@ export default {
 .logo {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 80px; /* Adjusted to move below the toggle button */
+  gap: 15px;
+  margin-top: 80px;
+  margin-bottom: 40px;
 }
 
 .logo img {
-  width: 45px;
-  height: auto;
-  filter: brightness(0) invert(1);
+  width: 35px;
+  padding: 4px;
+  background-color: white;
+  border-radius: 10px;
+  object-fit: contain;
 }
 
 .logo h2 {
   font-size: 20px;
   font-weight: 600;
-  margin: 0;
   color: white;
 }
 
@@ -368,154 +336,137 @@ h1 {
   opacity: 0.5;
   cursor: not-allowed;
 }
+/* Search and Filter */
+.search-bar {
+  padding: 14px 18px;
+  border: 1px solid #FFCCD4;
+  border-radius: 14px;
+  font-size: 16px;
+  width: 100%;
+  max-width: 300px;
+  background: #FFE0E5;
+  color: #FF1C55;
+  outline: none;
+}
 
-/* Filter Tab */
-.filter-tab {
-  position: absolute;
-  top: 20px;
-  right: 20px;
+/* Event Card Grid */
+.events-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.event-card {
   background: white;
-  padding: 20px;
-  border-radius: 16px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  border: 1px solid #FFCCD4;
+  transition: all 0.3s ease;
+  align-items: start;
+}
+.event-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(255, 75, 124, 0.15);
 }
 
-.filter-tab h3 {
-  margin: 0 0 10px 0;
-  font-size: 18px;
-  color: #2D1E2F;
-}
-
-.filter-tab label {
+.event-date {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 12px;
+  background: #FFE0E5;
+  min-width: 70px;
+}
+.event-date .day {
+  font-size: 28px;
+  font-weight: 700;
+  color: #FF1C55;
+}
+.event-date .month {
   font-size: 14px;
-  color: #6B4E5B;
+  color: #FFB3C7;
+  margin-top: 4px;
 }
 
-.filter-tab select,
-.filter-tab input {
-  padding: 8px;
-  border: 1px solid #FFD6DE;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #2D1E2F;
-}
-
-/* Search Bar */
-.search-bar {
-  width: calc(100% - 60px);
-  margin-left: 60px;
-  padding: 16px 24px;
-  border: 1px solid #FFD6DE;
-  border-radius: 16px;
-  margin-bottom: 30px;
-  font-size: 15px;
-  transition: all 0.3s ease;
-  background: white;
-}
-
-.search-bar:focus {
-  outline: none;
-  border-color: #FF4B6E;
-  box-shadow: 0 0 0 3px rgba(255, 75, 110, 0.1);
-}
-
-/* Table */
-table {
-  width: calc(100% - 60px);
-  margin-left: 60px;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: white;
-  border-radius: 24px;
-  overflow: hidden;
-  box-shadow: 0 4px 25px rgba(255, 75, 110, 0.08);
-}
-
-th, td {
-  padding: 18px;
-  text-align: left;
-  border-bottom: 1px solid #FFD6DE;
-}
-
-th {
-  background-color: #FFF5F7;
-  color: #2D1E2F;
+.event-details h3 {
+  color: #FF1C55;
+  font-size: 18px;
   font-weight: 600;
-  font-size: 14px;
+  margin: 0 0 8px;
 }
-
-td {
-  color: #6B4E5B;
-  font-size: 14px;
+.event-time {
+  color: #FFB3C7;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-
-tr:hover {
-  background-color: #FFF5F7;
-  cursor: pointer;
+.event-type {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: #FFE0E5;
+  color: #FF4B7C;
+  font-size: 14px;
+  margin-top: 8px;
+  font-weight: 500;
+}
+.event-venue {
+  font-size: 14px;
+  color: #888;
+  display: block;
+  margin-top: 6px;
 }
 
 /* Pagination */
 .pagination {
   display: flex;
-  align-items: center;
   justify-content: center;
-  gap: 16px;
-  margin-top: 30px;
-  margin-left: 60px;
+  align-items: center;
+  margin-top: 32px;
+  gap: 10px;
 }
 
 .pagination button {
-  padding: 10px 20px;
-  border: 1px solid #FFD6DE;
-  border-radius: 16px;
-  background: white;
-  color: #2D1E2F;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-weight: 500;
-}
-
-.pagination button:hover:not(:disabled) {
-  background: #FF4B6E;
+  background-color: #FF4B7C;
   color: white;
-  border-color: #FF4B6E;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
 }
-
 .pagination button:disabled {
-  opacity: 0.5;
+  background-color: #FFC0CB;
   cursor: not-allowed;
 }
-
 .pagination span {
-  color: #2D1E2F;
-  font-weight: 500;
+  font-weight: 600;
+  color: #FF4B7C;
 }
 
-/* Responsive Styles */
+/* Responsive */
 @media (max-width: 768px) {
   .main-content {
+    margin-left: 0;
     padding: 20px;
   }
 
-  h1, .actions, .search-bar, table {
-    margin-left: 0;
+  .events-grid {
+    grid-template-columns: 1fr;
   }
-
-  .actions {
-    flex-wrap: wrap;
-  }
-
-  .actions button {
-    flex: 1;
-    min-width: 120px;
-  }
-
-  table {
-    width: 100%;
-    overflow-x: auto;
-  }
+}
+.status-complete {
+  background-color: #4CAF50;
+  color: white;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 8px;
 }
 </style>

@@ -20,8 +20,8 @@
             <input type="password" placeholder="Confirm Password" v-model="confirmPassword" required />
           </div>
           <button type="submit">Register</button>
-          <p class="error" v-if="error">{{ error }}</p>
-          <p class="success" v-if="success">{{ success }}</p>
+          <p v-if="error" class="error">{{ error }}</p>
+<p v-else-if="success" class="success">{{ success }}</p>
           <router-link to="/" class="back-login">Already have an account? Login</router-link>
         </form>
       </div>
@@ -43,28 +43,18 @@
   const error = ref('');
   const success = ref('');
   
+
+
   const handleRegister = async () => {
   error.value = ''
   success.value = ''
 
   if (password.value !== confirmPassword.value) {
-    error.value = 'Passwords do not match.'
+    error.value = '❌ Passwords do not match.'
     return
   }
 
-  // Try logging in to check if email exists
-  const { error: signInError } = await supabase.auth.signInWithPassword({
-  email: email.value,
-  password: password.value // can be blank or dummy
-})
-
-  if (!signInError) {
-    error.value = 'This email is already registered. Please use a different email address.'
-    return
-  }
-
-  // Proceed with registration
-  const { error: signUpError } = await supabase.auth.signUp({
+  const { data, error: signUpError } = await supabase.auth.signUp({
     email: email.value,
     password: password.value,
     options: {
@@ -75,14 +65,20 @@
     }
   })
 
-  if (signUpError) {
-    error.value = signUpError.message
+  // ⚠️ Check if the user is already registered (Unconfirmed email)
+  if (data?.user?.identities?.length === 0) {
+    error.value = '❌ This email is already registered. Please try another email.'
     return
   }
 
-  success.value = 'Registration successful! Please check your email to verify your account. Redirecting to homepage...'
+  if (signUpError) {
+    error.value = `❌ ${signUpError.message}`
+    return
+  }
 
-  // Clear fields
+  success.value = '✅ Registration successful! Please check your email to verify your account. Redirecting...'
+
+  // Clear form
   firstName.value = ''
   lastName.value = ''
   email.value = ''
@@ -92,7 +88,8 @@
   setTimeout(() => {
     router.push('/')
   }, 6000)
-  };
+}
+
   </script>
   
   <style scoped>

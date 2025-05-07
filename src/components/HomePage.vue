@@ -3,13 +3,14 @@
       <!-- Sidebar -->
       <aside class="sidebar">
         <div class="logo">
-          <img src="../assets/logo.png" alt="Logo" />
-          <h2>Alumni Connect</h2>
+          <img src="../assets/logo.jpg" alt="Logo" />
+          <h2>Marian TBI Connect</h2>
         </div>
         <nav class="nav-links">
           <router-link to="/home" class="nav-item active"><i class="fas fa-home"></i><span>Home</span></router-link>
           <router-link to="/contacts" class="nav-item"><i class="fas fa-cog"></i><span>Contacts</span></router-link>
           <router-link to="/events" class="nav-item"><i class="fas fa-calendar"></i><span>Events</span></router-link>
+          <router-link to="/archive" class="nav-item"><i class="fas fa-calendar"></i><span>Archives</span></router-link>
           <router-link to="/approve-requests" class="nav-item"><i class="fas fa-envelope"></i><span>Requests</span></router-link>
         </nav>
         <a href="#" class="logout" @click.prevent="handleLogout"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
@@ -85,8 +86,6 @@
             </div>
             <canvas ref="barChart"></canvas>
             <div class="counts">
-              <div>Total Alumni: {{ totalAlumni }}</div>
-              <div>{{ activeMembers }}</div>
             </div>
           </div>
 
@@ -365,18 +364,22 @@ const openEventList = async () => {
   margin-bottom: 40px;
 }
 
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin-top: 80px;
-  }
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 80px;
+  margin-bottom: 40px;
+}
 
-  .logo img {
-    width: 45px;
-    height: auto;
-    filter: brightness(0) invert(1);
-  }
+.logo img {
+  width: 45px;
+  height: 45px;
+  padding: 6px;
+  background-color: white;
+  border-radius: 10px;
+  object-fit: contain;
+}
 
   .logo h2 {
     font-size: 20px;

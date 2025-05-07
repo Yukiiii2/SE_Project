@@ -5,14 +5,15 @@
     <div :class="['sidebar', { open: isSidebarOpen }]">
       <div class="sidebar-header">
         <div class="logo">
-          <img src="@/assets/logo.png" alt="Logo" />
-          <h2>Alumni Connect</h2>
+          <img src="@/assets/logo.jpg" alt="Logo" />
+          <h2>Marian TBI Connect</h2>
         </div>
       </div>
       <nav class="nav-links">
         <router-link to="/home" class="nav-item" active-class="active">Home</router-link>
         <router-link to="/contacts" class="nav-item" active-class="active">Contacts</router-link>
         <router-link to="/events" class="nav-item" active-class="active">Events</router-link>
+        <router-link to="/archive" class="nav-item" active-class="active">Archives</router-link>
         <router-link to="/approve-requests" class="nav-item" active-class="active">Requests</router-link>
       </nav>
       <button class="logout-btn" @click="handleLogout">Logout</button>
@@ -107,7 +108,7 @@
             </td>
             <td>{{ contact.alumni_ID }}</td>
             <td>{{ contact.alumni_Name }}</td>
-            <td>{{ contact.college }}</td>
+            <td>{{ contact.collegeName }}</td>
             <td>{{ contact.Program }}</td>
             <td>{{ contact.Email }}</td>
             <td>{{ contact.Occupation_Status }}</td>
@@ -123,7 +124,7 @@
       <!-- Pagination -->
       <div class="pagination">
         <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1">Previous</button>
-        <span>Page {{ currentPage }} of {{ totalPages }}</span>
+        <span>Page {{ currentPage }}  {{ totalPages }}</span>
         <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages">Next</button>
       </div>
     </div>
@@ -340,17 +341,23 @@ const deleteContacts = async () => {
 }
 
 const fetchContacts = async () => {
-  const { data: alumni, error } = await supabase
-    .from('alumni_table')
-    .select(`*, alumni_expertise ( expertise_tags ( id, name ) )`)
+  const { data: alumni, error: alumniError } = await supabase.from('alumni_table').select('*')
+  const { data: collegeList } = await supabase.from('colleges').select('id, name')
+  const { data: programList } = await supabase.from('programs').select('id, name')
 
-  if (!error) {
-    contacts.value = alumni.map(a => ({
-      ...a,
-      expertise_tags: a.alumni_expertise?.map(x => x.expertise_tags) || []
-    }))
+  if (!alumniError && alumni) {
+    contacts.value = alumni.map(a => {
+      const college = collegeList.find(c => c.id === a.college)
+      const program = programList.find(p => p.name === a.Program)
+
+      return {
+        ...a,
+        collegeName: college?.name || a.college,
+        programName: program?.name || a.Program
+      }
+    })
   } else {
-    console.error('Error fetching contacts:', error) // ✅ use error here only
+    console.error('Error fetching contacts:', alumniError)
   }
 }
 
@@ -379,7 +386,7 @@ onMounted(() => {
 .sidebar {
   width: 190px;
   height: 100vh;
-  background: linear-gradient(180deg, #FF4B6E 0%, #E63456 100%);
+  background: linear-gradient(180deg, #ff4b7c 0%, #ff1c55 100%);
   color: white;
   position: fixed;
   top: 0;
@@ -407,20 +414,22 @@ onMounted(() => {
 .logo {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 15px;
   margin-top: 80px;
+  margin-bottom: 40px;
 }
 
 .logo img {
-  width: 45px;
-  height: auto;
-  filter: brightness(0) invert(1);
+  width: 35px;
+  padding: 4px;
+  background-color: white;
+  border-radius: 10px;
+  object-fit: contain;
 }
 
 .logo h2 {
   font-size: 20px;
   font-weight: 600;
-  margin: 0;
   color: white;
 }
 
